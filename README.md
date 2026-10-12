@@ -44,7 +44,7 @@ kaapi-infra/
 ```bash
 cd bootstrap
 terraform init
-terraform apply      # creates the kaapi-terraform-state bucket
+terraform apply      # creates the kaapi-terraform-<environment>-state bucket
 ```
 
 ## Day-to-day
