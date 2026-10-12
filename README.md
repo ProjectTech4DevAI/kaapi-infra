@@ -48,7 +48,6 @@ terraform apply      # creates the kaapi-terraform-<environment>-state bucket
 ```
 
 ## Day-to-day
-
 ```bash
 make init     ENV=staging
 make plan     ENV=staging
