@@ -7,7 +7,6 @@ ENV_FILE := .env.$(ENV)
 
 -include $(ENV_FILE)
 
-# Hand .env values to Terraform as input variables
 export AWS_PROFILE
 export TF_VAR_aws_profile        := $(AWS_PROFILE)
 export TF_VAR_aws_region         := $(AWS_REGION)
