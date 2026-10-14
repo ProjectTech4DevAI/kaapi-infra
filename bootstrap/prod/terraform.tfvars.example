@@ -1,4 +1,0 @@
-# Copy to terraform.tfvars (gitignored):
-#   cp bootstrap/prod/terraform.tfvars.example bootstrap/prod/terraform.tfvars
-# Must match aws_account_id in environments/prod/terraform.tfvars
-aws_account_id = "REPLACE_WITH_PROD_ACCOUNT_ID"

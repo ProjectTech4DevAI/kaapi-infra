@@ -1,4 +1,0 @@
-# Copy to terraform.tfvars (gitignored):
-#   cp bootstrap/staging/terraform.tfvars.example bootstrap/staging/terraform.tfvars
-# Must match aws_account_id in environments/staging/terraform.tfvars
-aws_account_id = "REPLACE_WITH_STAGING_ACCOUNT_ID"

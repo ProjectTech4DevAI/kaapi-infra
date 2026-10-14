@@ -5,6 +5,7 @@ environment = "staging"
 vpc_cidr    = "10.10.0.0/16"
 
 # Account guard: Terraform refuses to run if AWS_PROFILE (from .env.staging) belongs to any other account.
+# Also used by "make bootstrap ENV=staging"; this is the only place to set it.
 aws_account_id = "REPLACE_WITH_STAGING_ACCOUNT_ID" # 12 digits: aws sts get-caller-identity --query Account --output text
 
 # ECS

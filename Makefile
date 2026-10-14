@@ -13,6 +13,8 @@ export TF_VAR_aws_profile        := $(AWS_PROFILE)
 export TF_VAR_aws_region         := $(AWS_REGION)
 export TF_VAR_state_bucket_name  := $(TF_STATE_BUCKET)
 
+AWS_ACCOUNT_ID := $(shell sed -n 's/^aws_account_id *= *"\([^"]*\)".*/\1/p' $(DIR)/terraform.tfvars 2>/dev/null)
+
 BACKEND_CONFIG := \
 	-backend-config="bucket=$(TF_STATE_BUCKET)" \
 	-backend-config="region=$(AWS_REGION)" \
@@ -23,7 +25,7 @@ BACKEND_CONFIG := \
 check-env:
 	@test -f $(ENV_FILE) || { echo "$(ENV_FILE) not found. Run: cp .env.example $(ENV_FILE) and fill it in."; exit 1; }
 	@test -f $(DIR)/terraform.tfvars || { echo "$(DIR)/terraform.tfvars not found. Run: cp $(DIR)/terraform.tfvars.example $(DIR)/terraform.tfvars and fill it in."; exit 1; }
-	@test -f $(BOOTSTRAP_DIR)/terraform.tfvars || { echo "$(BOOTSTRAP_DIR)/terraform.tfvars not found. Run: cp $(BOOTSTRAP_DIR)/terraform.tfvars.example $(BOOTSTRAP_DIR)/terraform.tfvars and fill it in."; exit 1; }
+	@test -n "$(AWS_ACCOUNT_ID)" || { echo "aws_account_id is missing in $(DIR)/terraform.tfvars"; exit 1; }
 	@test -n "$(AWS_PROFILE)" || { echo "AWS_PROFILE is empty in $(ENV_FILE)"; exit 1; }
 	@test -n "$(AWS_REGION)" || { echo "AWS_REGION is empty in $(ENV_FILE)"; exit 1; }
 	@test -n "$(TF_STATE_BUCKET)" || { echo "TF_STATE_BUCKET is empty in $(ENV_FILE)"; exit 1; }
@@ -31,7 +33,7 @@ check-env:
 # One-time per AWS account: create the state bucket for $(ENV)
 bootstrap: check-env
 	terraform -chdir=$(BOOTSTRAP_DIR) init
-	terraform -chdir=$(BOOTSTRAP_DIR) apply
+	TF_VAR_aws_account_id=$(AWS_ACCOUNT_ID) terraform -chdir=$(BOOTSTRAP_DIR) apply
 
 init: check-env
 	terraform -chdir=$(DIR) init -reconfigure $(BACKEND_CONFIG)
