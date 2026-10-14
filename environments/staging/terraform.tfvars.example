@@ -6,3 +6,6 @@ vpc_cidr    = "10.10.0.0/16"
 
 # Account guard: Terraform refuses to run if AWS_PROFILE (from .env.staging) belongs to any other account.
 aws_account_id = "REPLACE_WITH_STAGING_ACCOUNT_ID" # 12 digits: aws sts get-caller-identity --query Account --output text
+
+# ECS
+ecs_container_insights = "disabled" # enabled | enhanced | disabled (enabled/enhanced add CloudWatch cost)

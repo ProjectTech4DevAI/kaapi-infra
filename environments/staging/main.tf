@@ -51,7 +51,8 @@ module "alb" {
 module "ecs_cluster" {
   source = "../../modules/ecs-cluster"
 
-  name_prefix = local.name_prefix
+  name_prefix        = local.name_prefix
+  container_insights = var.ecs_container_insights
 }
 
 module "ecs_service" {

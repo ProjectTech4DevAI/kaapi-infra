@@ -32,3 +32,9 @@ variable "aws_account_id" {
     error_message = "aws_account_id must be a 12-digit AWS account ID."
   }
 }
+
+variable "ecs_container_insights" {
+  description = "Container Insights for the ECS cluster: enabled, enhanced or disabled"
+  type        = string
+  default     = "disabled"
+}
