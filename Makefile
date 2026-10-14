@@ -1,23 +1,52 @@
 # Usage: make plan ENV=staging
+# Values are read from .env.$(ENV) (see .env.example).
 ENV ?= staging
 DIR := environments/$(ENV)
+BOOTSTRAP_DIR := bootstrap/$(ENV)
+ENV_FILE := .env.$(ENV)
 
-.PHONY: init plan apply destroy fmt validate
+-include $(ENV_FILE)
 
-init:
-	terraform -chdir=$(DIR) init
+# Hand .env values to Terraform as input variables
+export AWS_PROFILE
+export TF_VAR_aws_profile        := $(AWS_PROFILE)
+export TF_VAR_aws_region         := $(AWS_REGION)
+export TF_VAR_state_bucket_name  := $(TF_STATE_BUCKET)
 
-plan:
+BACKEND_CONFIG := \
+	-backend-config="bucket=$(TF_STATE_BUCKET)" \
+	-backend-config="region=$(AWS_REGION)" \
+	-backend-config="profile=$(AWS_PROFILE)"
+
+.PHONY: check-env bootstrap init plan apply destroy fmt validate
+
+check-env:
+	@test -f $(ENV_FILE) || { echo "$(ENV_FILE) not found. Run: cp .env.example $(ENV_FILE) and fill it in."; exit 1; }
+	@test -f $(DIR)/terraform.tfvars || { echo "$(DIR)/terraform.tfvars not found. Run: cp $(DIR)/terraform.tfvars.example $(DIR)/terraform.tfvars and fill it in."; exit 1; }
+	@test -f $(BOOTSTRAP_DIR)/terraform.tfvars || { echo "$(BOOTSTRAP_DIR)/terraform.tfvars not found. Run: cp $(BOOTSTRAP_DIR)/terraform.tfvars.example $(BOOTSTRAP_DIR)/terraform.tfvars and fill it in."; exit 1; }
+	@test -n "$(AWS_PROFILE)" || { echo "AWS_PROFILE is empty in $(ENV_FILE)"; exit 1; }
+	@test -n "$(AWS_REGION)" || { echo "AWS_REGION is empty in $(ENV_FILE)"; exit 1; }
+	@test -n "$(TF_STATE_BUCKET)" || { echo "TF_STATE_BUCKET is empty in $(ENV_FILE)"; exit 1; }
+
+# One-time per AWS account: create the state bucket for $(ENV)
+bootstrap: check-env
+	terraform -chdir=$(BOOTSTRAP_DIR) init
+	terraform -chdir=$(BOOTSTRAP_DIR) apply
+
+init: check-env
+	terraform -chdir=$(DIR) init -reconfigure $(BACKEND_CONFIG)
+
+plan: check-env
 	terraform -chdir=$(DIR) plan -out=$(ENV).tfplan
 
-apply:
+apply: check-env
 	terraform -chdir=$(DIR) apply $(ENV).tfplan
 
-destroy:
+destroy: check-env
 	terraform -chdir=$(DIR) destroy
 
 fmt:
 	terraform fmt -recursive
 
-validate:
+validate: check-env
 	terraform -chdir=$(DIR) validate

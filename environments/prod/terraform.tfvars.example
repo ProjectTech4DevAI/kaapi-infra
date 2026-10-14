@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (gitignored) and fill in the values:
+#   cp environments/prod/terraform.tfvars.example environments/prod/terraform.tfvars
+project     = "kaapi"
+environment = "prod"
+vpc_cidr    = "10.20.0.0/16"
+
+# Account guard: Terraform refuses to run if AWS_PROFILE (from .env.prod) belongs to any other account.
+aws_account_id = "REPLACE_WITH_PROD_ACCOUNT_ID" # 12 digits: aws sts get-caller-identity --query Account --output text

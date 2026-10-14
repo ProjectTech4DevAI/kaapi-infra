@@ -17,3 +17,10 @@ terraform.rc
 *.auto.tfvars
 
 .DS_Store
+
+# Per-environment values (see .env.example)
+.env*
+!.env.example
+
+# Real tfvars are local only; commit terraform.tfvars.example instead
+terraform.tfvars

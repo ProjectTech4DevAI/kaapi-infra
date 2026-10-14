@@ -1,11 +1,9 @@
 # Remote state for the prod environment only.
-# The bucket is created once via ../../bootstrap.
+# bucket, region and profile come from .env.prod via "make init ENV=prod"
+# (passed as -backend-config, since backend blocks cannot read variables).
 terraform {
   backend "s3" {
-    bucket       = "kaapi-terraform-state"
     key          = "prod/terraform.tfstate"
-    region       = "ap-south-1"
-    profile      = "kaapi-prod"
     encrypt      = true
     use_lockfile = true
   }

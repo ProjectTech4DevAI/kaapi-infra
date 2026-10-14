@@ -1,11 +1,9 @@
 # Remote state for the staging environment only.
-# The bucket is created once via ../../bootstrap.
+# bucket, region and profile come from .env.staging via "make init ENV=staging"
+# (passed as -backend-config, since backend blocks cannot read variables).
 terraform {
   backend "s3" {
-    bucket       = "kaapi-terraform-state"
     key          = "staging/terraform.tfstate"
-    region       = "ap-south-1"
-    profile      = "kaapi-staging"
     encrypt      = true
     use_lockfile = true
   }

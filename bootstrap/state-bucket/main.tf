@@ -1,32 +1,6 @@
-# One-time setup: I think need to creates the S3 bucket that stores Terraform state for every
-# environment. Uses local state on purpose (chicken-and-egg). Run once per AWS account.
-terraform {
-  required_version = ">= 1.10.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.0"
-    }
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
-variable "aws_region" {
-  type    = string
-  default = "ap-south-1"
-}
-
-variable "state_bucket_name" {
-  type    = string
-  default = "kaapi-terraform-state"
-}
-
+# S3 bucket that stores Terraform state for one AWS account.
 resource "aws_s3_bucket" "state" {
-  bucket = var.state_bucket_name
+  bucket = var.bucket_name
 
   lifecycle {
     prevent_destroy = true
@@ -57,8 +31,4 @@ resource "aws_s3_bucket_public_access_block" "state" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
-}
-
-output "state_bucket" {
-  value = aws_s3_bucket.state.bucket
 }
