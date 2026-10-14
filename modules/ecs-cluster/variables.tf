@@ -3,12 +3,6 @@ variable "name_prefix" {
   type        = string
 }
 
-variable "tags" {
-  description = "Extra tags to apply to resources in this module"
-  type        = map(string)
-  default     = {}
-}
-
 variable "container_insights" {
   description = "CloudWatch Container Insights for the cluster: enabled, enhanced or disabled (adds CloudWatch cost)"
   type        = string

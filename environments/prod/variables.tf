@@ -13,11 +13,6 @@ variable "aws_region" {
   type        = string
 }
 
-variable "vpc_cidr" {
-  description = "CIDR block for the VPC"
-  type        = string
-}
-
 variable "aws_profile" {
   description = "AWS CLI profile (from ~/.aws/config) used to deploy this environment"
   type        = string
