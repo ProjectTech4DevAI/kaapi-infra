@@ -21,7 +21,10 @@ module "vpc" {
 module "ecr" {
   source = "../../modules/ecr"
 
-  name_prefix = local.name_prefix
+  name_prefix          = local.name_prefix
+  repositories         = var.ecr_repositories
+  image_tag_mutability = var.ecr_image_tag_mutability
+  max_image_count      = var.ecr_max_image_count
 }
 
 module "secrets_manager" {
