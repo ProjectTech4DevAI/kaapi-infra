@@ -33,3 +33,20 @@ variable "ecs_container_insights" {
   type        = string
   default     = "disabled"
 }
+
+variable "ecr_repositories" {
+  description = "ECR repositories to create, by short name"
+  type        = list(string)
+}
+
+variable "ecr_image_tag_mutability" {
+  description = "MUTABLE or IMMUTABLE image tags"
+  type        = string
+  default     = "MUTABLE"
+}
+
+variable "ecr_max_image_count" {
+  description = "How many most recent images to keep per repository"
+  type        = number
+  default     = 30
+}

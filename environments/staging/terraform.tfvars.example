@@ -7,3 +7,8 @@ aws_account_id = "REPLACE_WITH_STAGING_ACCOUNT_ID"
 
 # ECS
 ecs_container_insights = "disabled" # enabled | enhanced | disabled (enabled/enhanced add CloudWatch cost)
+
+# ECR
+ecr_repositories         = ["backend"] # one repo per service image; becomes kaapi-staging-backend
+ecr_image_tag_mutability = "MUTABLE"   # MUTABLE | IMMUTABLE
+ecr_max_image_count      = 10
