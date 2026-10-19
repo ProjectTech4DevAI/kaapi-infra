@@ -1,2 +1,2 @@
-# ECS task definition and service (reusable once per application/worker).
+# ECS service: runs and keeps a task definition alive behind the ALB.
 # Resources will be added here.
