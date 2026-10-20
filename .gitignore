@@ -24,3 +24,4 @@ terraform.rc
 
 # Real tfvars are local only; commit terraform.tfvars.example instead
 terraform.tfvars
+.claude/settings.local.json
