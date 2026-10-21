@@ -105,3 +105,23 @@ ecs_task_definitions = {
     }
   }
 }
+
+vpc_id                 = "REPLACE_ME"   # vpc-...
+ecs_subnet_ids         = ["REPLACE_ME"] # subnet-...; best in 2+ availability zones
+ecs_security_group_ids = ["REPLACE_ME"] # sg-...
+ecs_assign_public_ip   = false          # true only for public subnets without a NAT gateway
+
+ecs_services = {
+  "backend-celery" = {
+    task_definition    = "backend-celery" # key in ecs_task_definitions
+    min_tasks          = 1
+    max_tasks          = 2
+    cpu_target_percent = 70 # add tasks above this average CPU %, remove below it
+
+    # Send ALB traffic to the web container. Remove this block if there is no ALB.
+    load_balancer = {
+      target_group_arn = "REPLACE_ME" # arn:aws:elasticloadbalancing:...:targetgroup/...
+      container        = "backend"    # key in the task definition's containers
+    }
+  }
+}

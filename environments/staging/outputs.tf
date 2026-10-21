@@ -24,3 +24,14 @@ output "ecs_task_definitions" {
     }
   }
 }
+
+output "ecs_services" {
+  description = "ECS service name and task count limits per service"
+  value = {
+    for name, svc in module.ecs_service : name => {
+      service_name = svc.service_name
+      min_tasks    = svc.min_tasks
+      max_tasks    = svc.max_tasks
+    }
+  }
+}

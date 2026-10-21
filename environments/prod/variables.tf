@@ -78,8 +78,8 @@ variable "ecs_task_definitions" {
       essential        = optional(bool, true)
       environment      = optional(map(string), {})
     }))
-    environment = optional(map(string), {})
-    secrets = optional(map(string), {})
+    environment         = optional(map(string), {})
+    secrets             = optional(map(string), {})
     execution_role_name = string
     task_role_name      = string
   }))
@@ -111,5 +111,76 @@ variable "ecs_task_definitions" {
       ]
     ]))
     error_message = "An ECS execution_role_name or task_role_name is still \"REPLACE_ME\" in terraform.tfvars; use the real IAM role name."
+  }
+}
+
+variable "vpc_id" {
+  description = "Existing VPC the ECS tasks run in"
+  type        = string
+
+  validation {
+    condition     = can(regex("^vpc-[0-9a-f]+$", var.vpc_id))
+    error_message = "vpc_id must be a real VPC ID like vpc-0abc123 (not REPLACE_ME)."
+  }
+}
+
+variable "ecs_subnet_ids" {
+  description = "Existing subnets (in vpc_id) the ECS tasks run in"
+  type        = list(string)
+
+  validation {
+    condition     = length(var.ecs_subnet_ids) > 0 && alltrue([for s in var.ecs_subnet_ids : can(regex("^subnet-[0-9a-f]+$", s))])
+    error_message = "ecs_subnet_ids must be real subnet IDs like subnet-0abc123 (not REPLACE_ME)."
+  }
+}
+
+variable "ecs_security_group_ids" {
+  description = "Existing security groups attached to the ECS tasks"
+  type        = list(string)
+
+  validation {
+    condition     = length(var.ecs_security_group_ids) > 0 && alltrue([for s in var.ecs_security_group_ids : can(regex("^sg-[0-9a-f]+$", s))])
+    error_message = "ecs_security_group_ids must be real security group IDs like sg-0abc123 (not REPLACE_ME)."
+  }
+}
+
+variable "ecs_assign_public_ip" {
+  description = "Give tasks a public IP; true only for public subnets without a NAT gateway"
+  type        = bool
+  default     = false
+}
+
+variable "ecs_services" {
+  description = "ECS services keyed by short name; each runs one entry of ecs_task_definitions"
+  type = map(object({
+    task_definition    = string
+    min_tasks          = number
+    max_tasks          = number
+    cpu_target_percent = optional(number, 70)
+    load_balancer = optional(object({
+      target_group_arn = string
+      container        = string
+    }))
+  }))
+  default = {}
+
+  validation {
+    condition     = alltrue([for svc in values(var.ecs_services) : contains(keys(var.ecs_task_definitions), svc.task_definition)])
+    error_message = "Every ecs_services entry must use a task_definition that exists in ecs_task_definitions."
+  }
+
+  validation {
+    condition     = alltrue([for svc in values(var.ecs_services) : svc.min_tasks >= 0 && svc.max_tasks >= svc.min_tasks])
+    error_message = "For every ECS service, min_tasks must be >= 0 and max_tasks must be >= min_tasks."
+  }
+
+  validation {
+    condition = alltrue([
+      for svc in values(var.ecs_services) : svc.load_balancer == null ? true : (
+        can(regex("^arn:aws:elasticloadbalancing:", svc.load_balancer.target_group_arn)) &&
+        try(var.ecs_task_definitions[svc.task_definition].containers[svc.load_balancer.container].container_port != null, false)
+      )
+    ])
+    error_message = "load_balancer needs a real target group ARN (not REPLACE_ME) and a container from that task definition that has a container_port."
   }
 }
