@@ -22,6 +22,9 @@ ecs_task_definitions = {
     memory           = 6144 # MiB, shared by all containers
     cpu_architecture = "X86_64"
 
+    execution_role_name = "REPLACE_ME" # used by ECS: pull image, write logs, read secrets
+    task_role_name      = "REPLACE_ME" # used by the app code inside the containers
+
     containers = {
       # Web API -> container name kaapi-prod-backend
       backend = {

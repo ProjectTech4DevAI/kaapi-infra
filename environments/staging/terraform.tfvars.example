@@ -22,22 +22,21 @@ ecs_task_definitions = {
     memory           = 6144 # MiB, shared by all containers
     cpu_architecture = "X86_64"
 
+    execution_role_name = "REPLACE_ME" # used by ECS: pull image, write logs, read secrets
+    task_role_name      = "REPLACE_ME" # used by the app code inside the containers
+
     containers = {
-      # Web API -> container name kaapi-staging-backend
       backend = {
         image_repository = "backend" # key in ecr_repositories
         container_port   = 80
       }
 
-      # Celery worker, same image -> container name kaapi-staging-backend-celery
       "backend-celery" = {
         image_repository = "backend"
         command          = ["uv", "run", "celery", "-A", "app.celery.celery_app", "worker", "--queues=default", "--concurrency=4", "--loglevel=info"]
       }
     }
 
-    # Non-secret env vars shared by both containers.
-    # To give one container a different value, add environment = { NAME = "value" } inside it.
     environment = {
       API_VERSION                        = "REPLACE_ME"
       AWS_KMS_KEY_ID                     = "REPLACE_ME"
@@ -68,18 +67,7 @@ ecs_task_definitions = {
       MEMORY_THRESHOLD_PERCENT           = "REPLACE_ME"
       OTEL_ENABLED                       = "true"
       OTEL_SERVICE_NAME                  = "REPLACE_ME"
-      POSTGRES_DB                        = "REPLACE_ME"
-      POSTGRES_PORT                      = "REPLACE_ME"
-      POSTGRES_SERVER                    = "REPLACE_ME"
-      POSTGRES_USER                      = "REPLACE_ME"
       PROJECT_NAME                       = "Kaapi Staging"
-      RABBITMQ_HOST                      = "REPLACE_ME"
-      RABBITMQ_PORT                      = "REPLACE_ME"
-      RABBITMQ_USER                      = "REPLACE_ME"
-      RABBITMQ_VHOST                     = "REPLACE_ME"
-      REDIS_DB                           = "REPLACE_ME"
-      REDIS_HOST                         = "REPLACE_ME"
-      REDIS_PORT                         = "REPLACE_ME"
       RESOURCE_CHECK_INTERVAL            = "REPLACE_ME"
       RESOURCE_MONITORING_ENABLED        = "REPLACE_ME"
       SMTP_HOST                          = "REPLACE_ME"
@@ -88,24 +76,32 @@ ecs_task_definitions = {
       SMTP_TLS                           = "REPLACE_ME"
       SMTP_USER                          = "REPLACE_ME"
       STACK_NAME                         = "REPLACE_ME"
+      FIRST_SUPERUSER_PASSWORD           = "REPLACE_ME"
+      GCP_SA_KEY                         = "REPLACE_ME"
+      GCP_VERTEX_API_KEY                 = "REPLACE_ME"
+      KAAPI_GUARDRAILS_AUTH              = "REPLACE_ME"
+      LANGFUSE_SECRET_KEY                = "REPLACE_ME"
+      OPENAI_API_KEY                     = "REPLACE_ME"
+      SECRET_KEY                         = "REPLACE_ME"
+      SENTRY_DSN                         = "REPLACE_ME"
+      SMTP_PASSWORD                      = "REPLACE_ME"
     }
 
-    # Secret env vars: NAME = ARN of an existing secret. For a JSON secret, add
-    # ":<JSON_KEY>::" to read one key; for a plain secret, use the ARN as is.
-    # Replace the <...> parts with the real values; plan fails until you do.
     secrets = {
-      FIRST_SUPERUSER_PASSWORD = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:FIRST_SUPERUSER_PASSWORD::"
-      GCP_SA_KEY               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:GCP_SA_KEY::"
-      GCP_VERTEX_API_KEY       = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:GCP_VERTEX_API_KEY::"
-      KAAPI_GUARDRAILS_AUTH    = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:KAAPI_GUARDRAILS_AUTH::"
-      LANGFUSE_SECRET_KEY      = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:LANGFUSE_SECRET_KEY::"
-      OPENAI_API_KEY           = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:OPENAI_API_KEY::"
+      POSTGRES_DB              = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_DB::"
+      POSTGRES_PORT            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_PORT::"
+      POSTGRES_SERVER          = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_SERVER::"
+      POSTGRES_USER            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_USER::"
       POSTGRES_PASSWORD        = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_PASSWORD::"
+      RABBITMQ_HOST            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_HOST::"
+      RABBITMQ_PORT            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_PORT::"
+      RABBITMQ_USER            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_USER::"
+      RABBITMQ_VHOST           = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_VHOST::"
       RABBITMQ_PASSWORD        = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_PASSWORD::"
+      REDIS_DB                 = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_DB::"
+      REDIS_HOST               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_HOST::"
+      REDIS_PORT               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_PORT::"
       REDIS_PASSWORD           = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_PASSWORD::"
-      SECRET_KEY               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:SECRET_KEY::"
-      SENTRY_DSN               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:SENTRY_DSN::"
-      SMTP_PASSWORD            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:SMTP_PASSWORD::"
     }
   }
 }

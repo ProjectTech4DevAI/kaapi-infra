@@ -73,7 +73,10 @@ module "ecs_task_definition" {
   containers            = each.value.containers
   environment           = each.value.environment
 
-  secrets            = each.value.secrets
+  secrets = each.value.secrets
+
+  execution_role_arn = "arn:aws:iam::${var.aws_account_id}:role/${each.value.execution_role_name}"
+  task_role_arn      = "arn:aws:iam::${var.aws_account_id}:role/${each.value.task_role_name}"
   log_retention_days = var.ecs_log_retention_days
 }
 

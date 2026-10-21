@@ -20,12 +20,12 @@ output "container_ports" {
 
 output "execution_role_arn" {
   description = "ARN of the task execution role"
-  value       = aws_iam_role.execution.arn
+  value       = var.execution_role_arn
 }
 
 output "task_role_arn" {
   description = "ARN of the task role used by the application"
-  value       = aws_iam_role.task.arn
+  value       = var.task_role_arn
 }
 
 output "log_group_name" {

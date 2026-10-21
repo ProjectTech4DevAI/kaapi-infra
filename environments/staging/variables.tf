@@ -79,8 +79,9 @@ variable "ecs_task_definitions" {
       environment      = optional(map(string), {})
     }))
     environment = optional(map(string), {})
-    # Secret env vars: NAME => secret ARN (or "<secret-arn>:JSON_KEY::")
     secrets = optional(map(string), {})
+    execution_role_name = string
+    task_role_name      = string
   }))
   default = {}
 
@@ -101,5 +102,14 @@ variable "ecs_task_definitions" {
       ]
     ]))
     error_message = "Every ECS secret must be a real Secrets Manager or SSM parameter ARN (no <placeholders>)."
+  }
+
+  validation {
+    condition = alltrue(flatten([
+      for td in values(var.ecs_task_definitions) : [
+        for n in [td.execution_role_name, td.task_role_name] : n != "REPLACE_ME" && n != ""
+      ]
+    ]))
+    error_message = "An ECS execution_role_name or task_role_name is still \"REPLACE_ME\" in terraform.tfvars; use the real IAM role name."
   }
 }

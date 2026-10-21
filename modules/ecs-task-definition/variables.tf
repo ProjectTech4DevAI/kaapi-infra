@@ -80,6 +80,16 @@ variable "secrets" {
   default     = {}
 }
 
+variable "execution_role_arn" {
+  description = "ARN of the existing execution role ECS uses to pull images, write logs and read secrets"
+  type        = string
+}
+
+variable "task_role_arn" {
+  description = "ARN of the existing task role the app code inside the containers uses"
+  type        = string
+}
+
 variable "log_retention_days" {
   description = "How long to keep container logs in CloudWatch"
   type        = number
