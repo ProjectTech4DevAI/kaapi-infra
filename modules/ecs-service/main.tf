@@ -1,11 +1,7 @@
-# ECS service: keeps a task definition running in the given subnets, optionally
-# behind an ALB target group, and auto scales the task count between min and max.
-
 locals {
   name = "${var.name_prefix}-${var.name}"
 }
 
-# Read the subnets so a subnet from the wrong VPC is caught at plan time
 data "aws_subnet" "selected" {
   for_each = toset(var.subnet_ids)
 
