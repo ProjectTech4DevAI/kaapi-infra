@@ -1,7 +1,3 @@
-# One ECS task definition (one or more containers) and its CloudWatch log group.
-# IAM roles and secrets are not created here: existing ones are referenced by ARN.
-# Nothing runs until an ECS service uses this task definition.
-
 data "aws_region" "current" {}
 
 locals {
