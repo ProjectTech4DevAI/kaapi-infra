@@ -106,10 +106,10 @@ ecs_task_definitions = {
   }
 }
 
-vpc_id                 = "REPLACE_ME"   # vpc-...
+vpc_id                 = "REPLACE_ME"
 ecs_subnet_ids         = ["REPLACE_ME"] # subnet-...; best in 2+ availability zones
 ecs_security_group_ids = ["REPLACE_ME"] # sg-...
-ecs_assign_public_ip   = false          # true only for public subnets without a NAT gateway
+ecs_assign_public_ip   = false
 
 ecs_services = {
   "backend-celery" = {
