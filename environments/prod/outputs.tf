@@ -14,3 +14,15 @@ output "ecr_repository_urls" {
   description = "ECR repository URLs, by short name"
   value       = module.ecr.repository_urls
 }
+
+output "ecs_task_definitions" {
+  description = "Per task definition: family, ARN, container names and the secret to fill in"
+  value = {
+    for name, td in module.ecs_task_definition : name => {
+      family          = td.task_definition_family
+      arn             = td.task_definition_arn
+      container_names = td.container_names
+      log_group       = td.log_group_name
+    }
+  }
+}

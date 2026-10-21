@@ -58,10 +58,26 @@ module "ecs_cluster" {
   container_insights = var.ecs_container_insights
 }
 
-module "ecs_service" {
-  source = "../../modules/ecs-service"
+module "ecs_task_definition" {
+  source   = "../../modules/ecs-task-definition"
+  for_each = var.ecs_task_definitions
 
-  name_prefix = local.name_prefix
+  name_prefix           = local.name_prefix
+  name                  = each.key
+  launch_type           = var.ecs_launch_type
+  cpu_architecture      = each.value.cpu_architecture
+  cpu                   = each.value.cpu
+  memory                = each.value.memory
+  image_repository_urls = module.ecr.repository_urls
+  image_tag             = each.value.image_tag
+  containers            = each.value.containers
+  environment           = each.value.environment
+
+  secrets = each.value.secrets
+
+  execution_role_arn = "arn:aws:iam::${var.aws_account_id}:role/${each.value.execution_role_name}"
+  task_role_arn      = "arn:aws:iam::${var.aws_account_id}:role/${each.value.task_role_name}"
+  log_retention_days = var.ecs_log_retention_days
 }
 
 module "ec2" {

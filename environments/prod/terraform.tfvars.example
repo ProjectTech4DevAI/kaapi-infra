@@ -12,3 +12,100 @@ ecs_container_insights = "enabled" # enabled | enhanced | disabled (enabled/enha
 ecr_repositories         = ["backend"] # one repo per service image; becomes kaapi-prod-backend
 ecr_image_tag_mutability = "MUTABLE"   # MUTABLE | IMMUTABLE
 ecr_max_image_count      = 30
+
+ecs_launch_type        = "FARGATE" # FARGATE | EC2
+ecs_log_retention_days = 90
+
+ecs_task_definitions = {
+  "backend-celery" = {
+    cpu              = 2048 # 1024 = 1 vCPU, shared by all containers
+    memory           = 6144 # MiB, shared by all containers
+    cpu_architecture = "X86_64"
+
+    execution_role_name = "REPLACE_ME" # used by ECS: pull image, write logs, read secrets
+    task_role_name      = "REPLACE_ME" # used by the app code inside the containers
+
+    containers = {
+      # Web API -> container name kaapi-prod-backend
+      backend = {
+        image_repository = "backend" # key in ecr_repositories
+        container_port   = 80
+      }
+
+      # Celery worker, same image -> container name kaapi-prod-backend-celery
+      "backend-celery" = {
+        image_repository = "backend"
+        command          = ["uv", "run", "celery", "-A", "app.celery.celery_app", "worker", "--queues=default", "--concurrency=4", "--loglevel=info"]
+      }
+    }
+
+    # Non-secret env vars shared by both containers.
+    # To give one container a different value, add environment = { NAME = "value" } inside it.
+    environment = {
+      API_VERSION                        = "REPLACE_ME"
+      AWS_KMS_KEY_ID                     = "REPLACE_ME"
+      AWS_S3_BUCKET_PREFIX               = "REPLACE_ME"
+      BACKEND_CORS_ORIGINS               = "REPLACE_ME"
+      CALLBACK_CONNECT_TIMEOUT           = "REPLACE_ME"
+      CALLBACK_READ_TIMEOUT              = "REPLACE_ME"
+      CELERY_TASK_SOFT_TIME_LIMIT        = "REPLACE_ME"
+      CELERY_TASK_TIME_LIMIT             = "REPLACE_ME"
+      CELERY_WORKER_MAX_MEMORY_PER_CHILD = "REPLACE_ME"
+      CELERY_WORKER_MAX_TASKS_PER_CHILD  = "REPLACE_ME"
+      CPU_THRESHOLD_PERCENT              = "REPLACE_ME"
+      DOCKER_IMAGE_BACKEND               = "backend"
+      DOCKER_IMAGE_FRONTEND              = "frontend"
+      EMAILS_FROM_EMAIL                  = "REPLACE_ME"
+      EMAILS_FROM_NAME                   = "Kaapi"
+      EMAIL_TEST_USER                    = "REPLACE_ME"
+      ENVIRONMENT                        = "production"
+      FIRST_SUPERUSER                    = "REPLACE_ME"
+      FRONTEND_HOST                      = "REPLACE_ME"
+      GCP_PROJECT_ID                     = "REPLACE_ME"
+      GCP_VERTEX_LOCATION                = "REPLACE_ME"
+      GCS_AUDIO_BUCKET                   = "REPLACE_ME"
+      GOOGLE_CLIENT_ID                   = "REPLACE_ME"
+      KAAPI_GUARDRAILS_URL               = "REPLACE_ME"
+      LANGFUSE_HOST                      = "REPLACE_ME"
+      LANGFUSE_PUBLIC_KEY                = "REPLACE_ME"
+      MEMORY_THRESHOLD_PERCENT           = "REPLACE_ME"
+      OTEL_ENABLED                       = "REPLACE_ME"
+      OTEL_SERVICE_NAME                  = "REPLACE_ME"
+      POSTGRES_DB                        = "REPLACE_ME"
+      POSTGRES_PORT                      = "REPLACE_ME"
+      POSTGRES_SERVER                    = "REPLACE_ME"
+      POSTGRES_USER                      = "REPLACE_ME"
+      PROJECT_NAME                       = "REPLACE_ME"
+      RABBITMQ_HOST                      = "REPLACE_ME"
+      RABBITMQ_PORT                      = "REPLACE_ME"
+      RABBITMQ_USER                      = "REPLACE_ME"
+      RABBITMQ_VHOST                     = "REPLACE_ME"
+      REDIS_DB                           = "REPLACE_ME"
+      REDIS_HOST                         = "REPLACE_ME"
+      REDIS_PORT                         = "REPLACE_ME"
+      RESOURCE_CHECK_INTERVAL            = "REPLACE_ME"
+      RESOURCE_MONITORING_ENABLED        = "REPLACE_ME"
+      SMTP_HOST                          = "REPLACE_ME"
+      SMTP_PORT                          = "REPLACE_ME"
+      SMTP_SSL                           = "REPLACE_ME"
+      SMTP_TLS                           = "REPLACE_ME"
+      SMTP_USER                          = "REPLACE_ME"
+      STACK_NAME                         = "REPLACE_ME"
+    }
+
+    secrets = {
+      FIRST_SUPERUSER_PASSWORD = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:FIRST_SUPERUSER_PASSWORD::"
+      GCP_SA_KEY               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:GCP_SA_KEY::"
+      GCP_VERTEX_API_KEY       = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:GCP_VERTEX_API_KEY::"
+      KAAPI_GUARDRAILS_AUTH    = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:KAAPI_GUARDRAILS_AUTH::"
+      LANGFUSE_SECRET_KEY      = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:LANGFUSE_SECRET_KEY::"
+      OPENAI_API_KEY           = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:OPENAI_API_KEY::"
+      POSTGRES_PASSWORD        = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_PASSWORD::"
+      RABBITMQ_PASSWORD        = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_PASSWORD::"
+      REDIS_PASSWORD           = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_PASSWORD::"
+      SECRET_KEY               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:SECRET_KEY::"
+      SENTRY_DSN               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:SENTRY_DSN::"
+      SMTP_PASSWORD            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:SMTP_PASSWORD::"
+    }
+  }
+}

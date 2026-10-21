@@ -12,3 +12,96 @@ ecs_container_insights = "disabled" # enabled | enhanced | disabled (enabled/enh
 ecr_repositories         = ["backend"] # one repo per service image; becomes kaapi-staging-backend
 ecr_image_tag_mutability = "MUTABLE"   # MUTABLE | IMMUTABLE
 ecr_max_image_count      = 10
+
+ecs_launch_type        = "FARGATE" # FARGATE | EC2
+ecs_log_retention_days = 14
+
+ecs_task_definitions = {
+  "backend-celery" = {
+    cpu              = 2048 # 1024 = 1 vCPU, shared by all containers
+    memory           = 6144 # MiB, shared by all containers
+    cpu_architecture = "X86_64"
+
+    execution_role_name = "REPLACE_ME" # used by ECS: pull image, write logs, read secrets
+    task_role_name      = "REPLACE_ME" # used by the app code inside the containers
+
+    containers = {
+      backend = {
+        image_repository = "backend" # key in ecr_repositories
+        container_port   = 80
+      }
+
+      "backend-celery" = {
+        image_repository = "backend"
+        command          = ["uv", "run", "celery", "-A", "app.celery.celery_app", "worker", "--queues=default", "--concurrency=4", "--loglevel=info"]
+      }
+    }
+
+    environment = {
+      API_VERSION                        = "REPLACE_ME"
+      AWS_KMS_KEY_ID                     = "REPLACE_ME"
+      AWS_S3_BUCKET_PREFIX               = "REPLACE_ME"
+      BACKEND_CORS_ORIGINS               = "REPLACE_ME"
+      CALLBACK_CONNECT_TIMEOUT           = "REPLACE_ME"
+      CALLBACK_READ_TIMEOUT              = "REPLACE_ME"
+      CELERY_TASK_SOFT_TIME_LIMIT        = "REPLACE_ME"
+      CELERY_TASK_TIME_LIMIT             = "REPLACE_ME"
+      CELERY_WORKER_MAX_MEMORY_PER_CHILD = "REPLACE_ME"
+      CELERY_WORKER_MAX_TASKS_PER_CHILD  = "90"
+      CPU_THRESHOLD_PERCENT              = "REPLACE_ME"
+      DOCKER_IMAGE_BACKEND               = "backend"
+      DOCKER_IMAGE_FRONTEND              = "frontend"
+      EMAILS_FROM_EMAIL                  = "REPLACE_ME"
+      EMAILS_FROM_NAME                   = "Kaapi"
+      EMAIL_TEST_USER                    = "REPLACE_ME"
+      ENVIRONMENT                        = "staging"
+      FIRST_SUPERUSER                    = "REPLACE_ME"
+      FRONTEND_HOST                      = "REPLACE_ME"
+      GCP_PROJECT_ID                     = "REPLACE_ME"
+      GCP_VERTEX_LOCATION                = "REPLACE_ME"
+      GCS_AUDIO_BUCKET                   = "REPLACE_ME"
+      GOOGLE_CLIENT_ID                   = "REPLACE_ME"
+      KAAPI_GUARDRAILS_URL               = "REPLACE_ME"
+      LANGFUSE_HOST                      = "REPLACE_ME"
+      LANGFUSE_PUBLIC_KEY                = "REPLACE_ME"
+      MEMORY_THRESHOLD_PERCENT           = "REPLACE_ME"
+      OTEL_ENABLED                       = "true"
+      OTEL_SERVICE_NAME                  = "REPLACE_ME"
+      PROJECT_NAME                       = "Kaapi Staging"
+      RESOURCE_CHECK_INTERVAL            = "REPLACE_ME"
+      RESOURCE_MONITORING_ENABLED        = "REPLACE_ME"
+      SMTP_HOST                          = "REPLACE_ME"
+      SMTP_PORT                          = "REPLACE_ME"
+      SMTP_SSL                           = "REPLACE_ME"
+      SMTP_TLS                           = "REPLACE_ME"
+      SMTP_USER                          = "REPLACE_ME"
+      STACK_NAME                         = "REPLACE_ME"
+      FIRST_SUPERUSER_PASSWORD           = "REPLACE_ME"
+      GCP_SA_KEY                         = "REPLACE_ME"
+      GCP_VERTEX_API_KEY                 = "REPLACE_ME"
+      KAAPI_GUARDRAILS_AUTH              = "REPLACE_ME"
+      LANGFUSE_SECRET_KEY                = "REPLACE_ME"
+      OPENAI_API_KEY                     = "REPLACE_ME"
+      SECRET_KEY                         = "REPLACE_ME"
+      SENTRY_DSN                         = "REPLACE_ME"
+      SMTP_PASSWORD                      = "REPLACE_ME"
+    }
+
+    secrets = {
+      POSTGRES_DB              = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_DB::"
+      POSTGRES_PORT            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_PORT::"
+      POSTGRES_SERVER          = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_SERVER::"
+      POSTGRES_USER            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_USER::"
+      POSTGRES_PASSWORD        = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:POSTGRES_PASSWORD::"
+      RABBITMQ_HOST            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_HOST::"
+      RABBITMQ_PORT            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_PORT::"
+      RABBITMQ_USER            = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_USER::"
+      RABBITMQ_VHOST           = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_VHOST::"
+      RABBITMQ_PASSWORD        = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:RABBITMQ_PASSWORD::"
+      REDIS_DB                 = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_DB::"
+      REDIS_HOST               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_HOST::"
+      REDIS_PORT               = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_PORT::"
+      REDIS_PASSWORD           = "arn:aws:secretsmanager:ap-south-1:<account-id>:secret:<secret-name>:REDIS_PASSWORD::"
+    }
+  }
+}
