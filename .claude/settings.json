@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./environments/*/terraform.tfvars)",
+      "Edit(./environments/*/terraform.tfvars)",
+      "Write(./environments/*/terraform.tfvars)",
+      "Bash(* environments/*/terraform.tfvars*)",
+      "Bash(*/environments/*/terraform.tfvars*)"
+    ]
+  }
+}
