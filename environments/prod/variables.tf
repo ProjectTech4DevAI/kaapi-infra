@@ -184,3 +184,60 @@ variable "ecs_services" {
     error_message = "load_balancer needs a real target group ARN (not REPLACE_ME) and a container from that task definition that has a container_port."
   }
 }
+
+variable "monitoring_alert_topic_name" {
+  description = "Short name of the SNS alert topic; full name becomes <project>-<environment>-<name>"
+  type        = string
+  default     = "monitoring-alerts"
+}
+
+variable "monitoring_alert_emails" {
+  description = "Email addresses that receive monitoring alerts (each must confirm the AWS email)"
+  type        = list(string)
+  default     = []
+}
+
+variable "monitoring_ecs_cpu_threshold_percent" {
+  description = "Alarm when an ECS service's average CPU stays above this %"
+  type        = number
+  default     = 80
+}
+
+variable "monitoring_ecs_memory_threshold_percent" {
+  description = "Alarm when an ECS service's average memory stays above this %"
+  type        = number
+  default     = 80
+}
+
+variable "monitoring_ec2_instances" {
+  description = "EC2 instances to alarm on, short key => { instance_id, cloudwatch_agent, disk_path }"
+  type = map(object({
+    instance_id      = string
+    cloudwatch_agent = optional(bool, false) # true adds memory and disk alarms; the agent must be installed
+    disk_path        = optional(string, "/")
+  }))
+  default = {}
+
+  validation {
+    condition     = alltrue([for inst in values(var.monitoring_ec2_instances) : can(regex("^i-[0-9a-f]{8,17}$", inst.instance_id))])
+    error_message = "Each monitoring_ec2_instances entry needs a real instance_id like i-0123456789abcdef0 (not REPLACE_ME)."
+  }
+}
+
+variable "monitoring_ec2_cpu_threshold_percent" {
+  description = "Alarm when an EC2 instance's average CPU stays above this %"
+  type        = number
+  default     = 80
+}
+
+variable "monitoring_ec2_memory_threshold_percent" {
+  description = "Alarm when an EC2 instance's memory use stays above this % (needs CloudWatch agent)"
+  type        = number
+  default     = 80
+}
+
+variable "monitoring_ec2_disk_threshold_percent" {
+  description = "Alarm when an EC2 instance's disk use stays above this % (needs CloudWatch agent)"
+  type        = number
+  default     = 80
+}

@@ -37,3 +37,12 @@ output "ecs_services" {
     }
   }
 }
+
+output "monitoring" {
+  description = "SNS alert topic, subscribed emails and CloudWatch alarm names"
+  value = {
+    topic_arn         = module.sns.topic_arn
+    subscribed_emails = module.sns.subscribed_emails
+    alarm_names       = module.cloudwatch.alarm_names
+  }
+}
