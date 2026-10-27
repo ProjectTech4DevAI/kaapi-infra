@@ -136,7 +136,7 @@ monitoring_ecs_memory_threshold_percent = 80 # alarm when average memory stays a
 
 # EC2 instances to alarm on (CPU + status check always; memory + disk need the CloudWatch agent)
 monitoring_ec2_instances = {
-  # "rabbitmq" = {
+  # "backend" = {
   #   instance_id      = "<instance_id>"
   #   cloudwatch_agent = false # true only if the CloudWatch agent is installed on the instance
   #   disk_path        = "/"   # mount point to watch for disk alarms
