@@ -119,10 +119,29 @@ module "rds" {
   name_prefix = local.name_prefix
 }
 
+module "sns" {
+  source = "../../modules/sns"
+
+  name_prefix     = local.name_prefix
+  topic_name      = var.monitoring_alert_topic_name
+  email_addresses = var.monitoring_alert_emails
+}
+
 module "cloudwatch" {
   source = "../../modules/cloudwatch"
 
-  name_prefix = local.name_prefix
+  name_prefix     = local.name_prefix
+  alarm_topic_arn = module.sns.topic_arn
+
+  ecs_cluster_name             = module.ecs_cluster.cluster_name
+  ecs_service_names            = { for key, svc in module.ecs_service : key => svc.service_name }
+  ecs_cpu_threshold_percent    = var.monitoring_ecs_cpu_threshold_percent
+  ecs_memory_threshold_percent = var.monitoring_ecs_memory_threshold_percent
+
+  ec2_instances                = var.monitoring_ec2_instances
+  ec2_cpu_threshold_percent    = var.monitoring_ec2_cpu_threshold_percent
+  ec2_memory_threshold_percent = var.monitoring_ec2_memory_threshold_percent
+  ec2_disk_threshold_percent   = var.monitoring_ec2_disk_threshold_percent
 }
 
 module "eventbridge" {

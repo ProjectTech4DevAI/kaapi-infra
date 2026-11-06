@@ -129,3 +129,23 @@ ecs_services = {
     }
   }
 }
+
+# Monitoring: SNS alert topic + CloudWatch alarms
+monitoring_alert_topic_name = "monitoring-alerts" # becomes kaapi-prod-monitoring-alerts
+monitoring_alert_emails = [
+  # "someone@example.org",
+]
+monitoring_ecs_cpu_threshold_percent    = 80 # alarm when average CPU stays above this for 10 minutes
+monitoring_ecs_memory_threshold_percent = 80 # alarm when average memory stays above this for 10 minutes
+
+# EC2 instances to alarm on (CPU + status check always; memory + disk need the CloudWatch agent)
+monitoring_ec2_instances = {
+  # "backend" = {
+  #   instance_id      = "<instance_id>"
+  #   cloudwatch_agent = false # true only if the CloudWatch agent is installed on the instance
+  #   disk_path        = "/"   # mount point to watch for disk alarms
+  # }
+}
+monitoring_ec2_cpu_threshold_percent    = 80
+monitoring_ec2_memory_threshold_percent = 80
+monitoring_ec2_disk_threshold_percent   = 80
