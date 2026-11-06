@@ -1,5 +1,4 @@
 locals {
-  # One alarm per service per metric, e.g. "backend-celery-cpu"
   ecs_alarms = merge([
     for key, service_name in var.ecs_service_names : {
       "${key}-cpu" = {
@@ -67,8 +66,6 @@ locals {
   ]...)
 
   # Agent metrics carry extra dimensions (ImageId, InstanceType, device, ...)
-  # that differ per setup, so they are matched with a Metrics Insights query
-  # filtered on InstanceId instead of an exact dimension set.
   ec2_agent_alarms = merge([
     for key, inst in var.ec2_instances : {
       "${key}-memory-high" = {
