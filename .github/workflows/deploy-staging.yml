@@ -1,0 +1,21 @@
+name: deploy-staging
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "environments/staging/**"
+      - "modules/**"
+      - ".github/workflows/deploy-staging.yml"
+      - ".github/workflows/plan-and-apply.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  staging:
+    uses: ./.github/workflows/plan-and-apply.yml
+    with:
+      environment: staging

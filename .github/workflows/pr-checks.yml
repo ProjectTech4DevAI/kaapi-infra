@@ -1,0 +1,30 @@
+name: pr-checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: validate (${{ matrix.environment }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [staging, prod]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.6
+          terraform_wrapper: false
+
+      - name: Format
+        run: terraform fmt -check -recursive
+
+      - name: Validate
+        run: |
+          terraform -chdir=environments/${{ matrix.environment }} init -backend=false
+          terraform -chdir=environments/${{ matrix.environment }} validate

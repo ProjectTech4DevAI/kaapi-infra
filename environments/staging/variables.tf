@@ -14,8 +14,9 @@ variable "aws_region" {
 }
 
 variable "aws_profile" {
-  description = "AWS CLI profile (from ~/.aws/config) used to deploy this environment"
+  description = "AWS CLI profile (from ~/.aws/config) used to deploy this environment; null in CI, which uses OIDC credentials"
   type        = string
+  default     = null
 }
 
 variable "aws_account_id" {
