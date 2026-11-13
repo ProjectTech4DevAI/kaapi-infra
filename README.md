@@ -6,6 +6,17 @@ Each environment (`staging`, `prod`, and any added later) is built from the same
 
 > Make infra changes here and apply them with Terraform. Do not edit these resources by hand in the AWS console: Terraform will undo or conflict with manual changes on the next apply.
 
+## Repository structure
+
+![kaapi-infra folder structure: bootstrap creates the state buckets, environments wire the shared modules, and each environment keeps its state in its own S3 bucket](docs/images/folder-structure-diagram.png)
+
+| Folder | Purpose |
+|---|---|
+| `bootstrap/` | One-time setup per AWS account: the S3 bucket that holds Terraform state |
+| `environments/` | One folder per environment (`staging`, `prod`) that wires the modules together with that environment's values |
+| `modules/` | Reusable building blocks (VPC, ECS, ECR, RDS, CloudWatch, SNS, ...) shared by all environments |
+| `docs/` | Diagrams and other documentation |
+
 ## Deploying (GitHub Actions)
 
 Changes reach AWS only through GitHub Actions, and only after approval. Nobody needs AWS credentials to contribute.
@@ -24,5 +35,3 @@ Changes reach AWS only through GitHub Actions, and only after approval. Nobody n
 - If a plan has no changes, the apply step is skipped.
 - Only tags like `v1.2.3` deploy prod, and only when the tag points to a commit on `main`. Tags such as `v1.2.3-rc1` are ignored.
 - Staging can also be re-run from **Actions → deploy-staging → Run workflow**.
-
-AWS access uses GitHub OIDC: each GitHub environment can assume exactly one IAM role in its account (`kaapi-<env>-github-plan` is read-only, `kaapi-<env>-github-apply` can change resources). There are no stored AWS keys.
