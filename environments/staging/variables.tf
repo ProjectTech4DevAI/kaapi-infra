@@ -122,6 +122,7 @@ variable "ecs_private_environment" {
   description = "Env vars kept out of git (emails, usernames), task definition key => NAME => value; merged into that task definition's environment"
   type        = map(map(string))
   default     = {}
+  sensitive   = true
 
   validation {
     condition     = alltrue(flatten([for env in values(var.ecs_private_environment) : [for v in values(env) : v != "REPLACE_ME"]]))
@@ -210,6 +211,7 @@ variable "monitoring_alert_emails" {
   description = "Email addresses that receive monitoring alerts (each must confirm the AWS email)"
   type        = list(string)
   default     = []
+  sensitive   = true
 }
 
 variable "monitoring_ecs_cpu_threshold_percent" {

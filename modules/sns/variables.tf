@@ -9,9 +9,10 @@ variable "topic_name" {
 }
 
 variable "email_addresses" {
-  description = "Email addresses subscribed to the topic"
+  description = "Email addresses subscribed to the topic; kept sensitive so they stay out of plan output"
   type        = list(string)
   default     = []
+  sensitive   = true
 
   validation {
     condition     = alltrue([for e in var.email_addresses : can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", e))])
