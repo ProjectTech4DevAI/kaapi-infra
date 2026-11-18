@@ -79,8 +79,11 @@ variable "ecs_task_definitions" {
       essential        = optional(bool, true)
       environment      = optional(map(string), {})
     }))
-    environment         = optional(map(string), {})
-    secrets             = optional(map(string), {})
+    environment = optional(map(string), {})
+    secrets = optional(map(object({
+      secret = string
+      key    = optional(string)
+    })), {})
     execution_role_name = string
     task_role_name      = string
   }))
@@ -93,16 +96,16 @@ variable "ecs_task_definitions" {
         [for c in values(td.containers) : [for v in values(c.environment) : v != "REPLACE_ME"]],
       )
     ]))
-    error_message = "Some ECS environment variables are still \"REPLACE_ME\" in terraform.tfvars; fill them in."
+    error_message = "Some ECS environment variables are still \"REPLACE_ME\" in constants.tfvars; fill them in."
   }
 
   validation {
     condition = alltrue(flatten([
       for td in values(var.ecs_task_definitions) : [
-        for v in values(td.secrets) : can(regex("^arn:aws:(secretsmanager|ssm):[^<>]+$", v))
+        for s in values(td.secrets) : s.secret != "REPLACE_ME" && s.secret != ""
       ]
     ]))
-    error_message = "Every ECS secret must be a real Secrets Manager or SSM parameter ARN (no <placeholders>)."
+    error_message = "Every ECS secret needs a real Secrets Manager secret name (not REPLACE_ME)."
   }
 
   validation {
@@ -111,7 +114,18 @@ variable "ecs_task_definitions" {
         for n in [td.execution_role_name, td.task_role_name] : n != "REPLACE_ME" && n != ""
       ]
     ]))
-    error_message = "An ECS execution_role_name or task_role_name is still \"REPLACE_ME\" in terraform.tfvars; use the real IAM role name."
+    error_message = "An ECS execution_role_name or task_role_name is still \"REPLACE_ME\" in constants.tfvars; use the real IAM role name."
+  }
+}
+
+variable "ecs_private_environment" {
+  description = "Env vars kept out of git (emails, usernames), task definition key => NAME => value; merged into that task definition's environment"
+  type        = map(map(string))
+  default     = {}
+
+  validation {
+    condition     = alltrue(flatten([for env in values(var.ecs_private_environment) : [for v in values(env) : v != "REPLACE_ME"]]))
+    error_message = "Some values in ecs_private_environment are still \"REPLACE_ME\"."
   }
 }
 

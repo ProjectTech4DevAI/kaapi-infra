@@ -42,12 +42,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-
-      # TFVARS_BASE64 is the environment's terraform.tfvars, base64-encoded
-      - name: Write tfvars
-        env:
-          TFVARS_BASE64: ${{ secrets.TFVARS_BASE64 }}
-        run: echo "$TFVARS_BASE64" | base64 --decode > "$TF_DIR/terraform.tfvars"
+          mask-aws-account-id: true
 
       - name: Init
         run: >-
@@ -59,9 +54,16 @@ jobs:
         id: plan
         env:
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+          TF_VAR_aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
+          TF_VAR_monitoring_alert_emails: ${{ secrets.MONITORING_ALERT_EMAILS || '[]' }}
+          TF_VAR_ecs_private_environment: ${{ secrets.ECS_PRIVATE_ENVIRONMENT || '{}' }}
+          TF_VAR_vpc_id: ${{ secrets.VPC_ID }}
+          TF_VAR_ecs_subnet_ids: ${{ secrets.ECS_SUBNET_IDS }}
+          TF_VAR_ecs_security_group_ids: ${{ secrets.ECS_SECURITY_GROUP_IDS }}
+          TF_VAR_monitoring_ec2_instances: ${{ secrets.MONITORING_EC2_INSTANCES || '{}' }}
         run: |
           set +e
-          terraform -chdir="$TF_DIR" plan -out=tfplan -detailed-exitcode -lock-timeout=5m
+          terraform -chdir="$TF_DIR" plan -var-file=constants.tfvars -out=tfplan -detailed-exitcode -lock-timeout=5m
           code=$?
           set -e
           if [ "$code" -eq 1 ]; then exit 1; fi
@@ -107,6 +109,7 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
+          mask-aws-account-id: true
 
       - name: Init
         run: >-

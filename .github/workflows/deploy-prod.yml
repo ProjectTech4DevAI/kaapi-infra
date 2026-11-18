@@ -10,7 +10,6 @@ permissions:
   id-token: write
 
 jobs:
-  # Rejects tags that point outside main before anyone is asked to approve
   check-tag:
     runs-on: ubuntu-latest
     steps:
