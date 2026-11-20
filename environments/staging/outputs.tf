@@ -37,10 +37,10 @@ output "ecs_services" {
 }
 
 output "monitoring" {
-  description = "SNS alert topic, subscribed emails and CloudWatch alarm names"
+  description = "SNS alert topic, subscriber count and CloudWatch alarm names"
   value = {
-    topic_arn         = module.sns.topic_arn
-    subscribed_emails = module.sns.subscribed_emails
-    alarm_names       = module.cloudwatch.alarm_names
+    topic_arn          = module.sns.topic_arn
+    subscription_count = module.sns.subscription_count
+    alarm_names        = module.cloudwatch.alarm_names
   }
 }

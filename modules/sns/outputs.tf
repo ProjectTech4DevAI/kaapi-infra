@@ -8,7 +8,7 @@ output "topic_name" {
   value       = aws_sns_topic.this.name
 }
 
-output "subscribed_emails" {
-  description = "Email addresses subscribed to the topic (each must confirm by email)"
-  value       = keys(aws_sns_topic_subscription.email)
+output "subscription_count" {
+  description = "Number of email subscriptions (each must confirm by email)"
+  value       = length(aws_sns_topic_subscription.email)
 }

@@ -72,12 +72,14 @@ variable "environment" {
   description = "Non-secret environment variables shared by all containers, NAME => value"
   type        = map(string)
   default     = {}
+  sensitive   = true # keeps values out of plan output and public CI logs
 }
 
 variable "secrets" {
   description = "Secret environment variables shared by all containers, NAME => valueFrom: a Secrets Manager secret ARN, \"<secret-arn>:JSON_KEY::\" for one key of a JSON secret, or an SSM parameter ARN"
   type        = map(string)
   default     = {}
+  sensitive   = true # keeps values out of plan output and public CI logs
 }
 
 variable "execution_role_arn" {

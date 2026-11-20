@@ -58,6 +58,14 @@ module "ecs_cluster" {
   container_insights = var.ecs_container_insights
 }
 
+data "aws_secretsmanager_secret" "ecs" {
+  for_each = toset(flatten([
+    for td in values(var.ecs_task_definitions) : [for s in values(td.secrets) : s.secret]
+  ]))
+
+  name = each.value
+}
+
 module "ecs_task_definition" {
   source   = "../../modules/ecs-task-definition"
   for_each = var.ecs_task_definitions
@@ -71,9 +79,13 @@ module "ecs_task_definition" {
   image_repository_urls = module.ecr.repository_urls
   image_tag             = each.value.image_tag
   containers            = each.value.containers
-  environment           = each.value.environment
+  environment           = merge(each.value.environment, lookup(var.ecs_private_environment, each.key, {}))
 
-  secrets = each.value.secrets
+  secrets = {
+    for name, s in each.value.secrets : name => (
+      s.key == null ? data.aws_secretsmanager_secret.ecs[s.secret].arn : "${data.aws_secretsmanager_secret.ecs[s.secret].arn}:${s.key}::"
+    )
+  }
 
   execution_role_arn = "arn:aws:iam::${var.aws_account_id}:role/${each.value.execution_role_name}"
   task_role_arn      = "arn:aws:iam::${var.aws_account_id}:role/${each.value.task_role_name}"

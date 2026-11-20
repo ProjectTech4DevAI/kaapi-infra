@@ -13,8 +13,6 @@ resource "aws_ecr_repository" "this" {
   }
 }
 
-# Keeps storage cost down: untagged layers are cleaned up quickly and only
-# the most recent tagged images are kept for rollbacks.
 resource "aws_ecr_lifecycle_policy" "this" {
   for_each = aws_ecr_repository.this
 

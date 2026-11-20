@@ -1,5 +1,6 @@
 # Usage: make plan ENV=staging
-# Values are read from .env.$(ENV) (see .env.example).
+# Values are read from .env.$(ENV) (see .env.example), $(DIR)/constants.tfvars (committed)
+# and $(DIR)/terraform.tfvars (private values only, never committed).
 ENV ?= staging
 DIR := environments/$(ENV)
 BOOTSTRAP_DIR := bootstrap/$(ENV)
@@ -38,13 +39,13 @@ init: check-env
 	terraform -chdir=$(DIR) init -reconfigure $(BACKEND_CONFIG)
 
 plan: check-env
-	terraform -chdir=$(DIR) plan -out=$(ENV).tfplan
+	terraform -chdir=$(DIR) plan -var-file=constants.tfvars -out=$(ENV).tfplan
 
 apply: check-env
 	terraform -chdir=$(DIR) apply $(ENV).tfplan
 
 destroy: check-env
-	terraform -chdir=$(DIR) destroy
+	terraform -chdir=$(DIR) destroy -var-file=constants.tfvars
 
 fmt:
 	terraform fmt -recursive
