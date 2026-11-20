@@ -24,6 +24,13 @@ jobs:
       - name: Format
         run: terraform fmt -check -recursive
 
+      - name: No REPLACE_ME left
+        run: |
+          if grep -n "REPLACE_ME" environments/${{ matrix.environment }}/constants.tfvars; then
+            echo "::error::environments/${{ matrix.environment }}/constants.tfvars still has REPLACE_ME values"
+            exit 1
+          fi
+
       - name: Validate
         run: |
           terraform -chdir=environments/${{ matrix.environment }} init -backend=false
