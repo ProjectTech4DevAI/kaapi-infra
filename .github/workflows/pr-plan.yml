@@ -17,7 +17,6 @@ permissions:
 jobs:
   plan:
     name: plan (staging)
-    # Pull requests from forks never get AWS access
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     environment: staging-pr-plan
