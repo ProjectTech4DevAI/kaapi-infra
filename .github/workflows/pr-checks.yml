@@ -14,7 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [staging, prod]
+        # TODO: need to add prod once the staging environment syncup with terraform state
+        environment: [staging]
     steps:
       - uses: actions/checkout@v4
 

@@ -1,0 +1,72 @@
+name: pr-plan
+
+on:
+  pull_request:
+    paths:
+      - "environments/**"
+      - "modules/**"
+      - ".github/actions/terraform-plan/**"
+      - ".github/workflows/pr-plan.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  plan:
+    name: plan (staging)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: staging-pr-plan
+    concurrency:
+      group: terraform-staging-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    outputs:
+      summary: ${{ steps.plan.outputs.summary }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Plan
+        id: plan
+        uses: ./.github/actions/terraform-plan
+        with:
+          environment: staging
+          vars: ${{ toJSON(vars) }}
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          tf-state-bucket: ${{ secrets.TF_STATE_BUCKET }}
+          aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          vpc-id: ${{ secrets.VPC_ID }}
+          ecs-subnet-ids: ${{ secrets.ECS_SUBNET_IDS }}
+          ecs-security-group-ids: ${{ secrets.ECS_SECURITY_GROUP_IDS }}
+          lock: "false"
+          summary-note: Plan for this pull request only. Nothing is applied until it is merged and approved.
+
+  comment:
+    needs: plan
+    if: always() && needs.plan.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Post plan to the pull request
+        uses: actions/github-script@v7
+        env:
+          RESULT: ${{ needs.plan.result }}
+          SUMMARY: ${{ needs.plan.outputs.summary }}
+        with:
+          script: |
+            const marker = "<!-- terraform-plan:staging -->";
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = process.env.RESULT === "success"
+              ? `${marker}\n### Terraform plan: staging\n${process.env.SUMMARY}\n\nFull plan: [workflow run](${runUrl}). Nothing is applied from pull requests.`
+              : `${marker}\n### Terraform plan: staging ❌\nThe plan failed. See the [workflow run](${runUrl}).`;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number, per_page: 100,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            }

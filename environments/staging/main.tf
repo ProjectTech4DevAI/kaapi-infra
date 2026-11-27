@@ -14,6 +14,8 @@ module "vpc" {
   source = "../../modules/vpc"
 
   name_prefix = local.name_prefix
+  cidr_block  = var.vpc_cidr
+  tags        = { Product = "Kaapi" }
 }
 
 module "ecr" {
@@ -56,12 +58,21 @@ module "ecs_cluster" {
   container_insights = var.ecs_container_insights
 }
 
+locals {
+  ecs_secret_names = {
+    db       = var.ecs_db_secret_name
+    rabbitmq = var.ecs_rabbitmq_secret_name
+    redis    = var.ecs_redis_secret_name
+    config   = var.ecs_config_secret_name
+  }
+}
+
 data "aws_secretsmanager_secret" "ecs" {
   for_each = toset(flatten([
-    for td in values(var.ecs_task_definitions) : [for s in values(td.secrets) : s.secret]
+    for td in values(var.ecs_task_definitions) : [for group, names in td.secrets : group if length(names) > 0]
   ]))
 
-  name = each.value
+  name = local.ecs_secret_names[each.value]
 }
 
 module "ecs_task_definition" {
@@ -77,16 +88,16 @@ module "ecs_task_definition" {
   image_repository_urls = module.ecr.repository_urls
   image_tag             = each.value.image_tag
   containers            = each.value.containers
-  environment           = merge(each.value.environment, lookup(var.ecs_private_environment, each.key, {}))
+  environment           = each.value.environment
 
-  secrets = {
-    for name, s in each.value.secrets : name => (
-      s.key == null ? data.aws_secretsmanager_secret.ecs[s.secret].arn : "${data.aws_secretsmanager_secret.ecs[s.secret].arn}:${s.key}::"
-    )
-  }
+  secrets = merge([
+    for group, names in each.value.secrets : {
+      for name in names : name => "${data.aws_secretsmanager_secret.ecs[group].arn}:${name}::"
+    }
+  ]...)
 
-  execution_role_arn = "arn:aws:iam::${var.aws_account_id}:role/${each.value.execution_role_name}"
-  task_role_arn      = "arn:aws:iam::${var.aws_account_id}:role/${each.value.task_role_name}"
+  execution_role_arn = "arn:aws:iam::${var.aws_account_id}:role/${var.ecs_execution_role_name}"
+  task_role_arn      = "arn:aws:iam::${var.aws_account_id}:role/${var.ecs_task_role_name}"
   log_retention_days = var.ecs_log_retention_days
 }
 
@@ -117,10 +128,16 @@ module "ecs_service" {
   }
 }
 
+locals {
+  ec2_instance_ids = { for key, id in var.ec2_instance_ids : key => id if id != "" }
+}
+
 module "ec2" {
   source = "../../modules/ec2"
 
-  name_prefix = local.name_prefix
+  name_prefix  = local.name_prefix
+  instances    = var.ec2_instances
+  instance_ids = local.ec2_instance_ids
 }
 
 module "rds" {
@@ -148,7 +165,7 @@ module "cloudwatch" {
   ecs_cpu_threshold_percent    = var.monitoring_ecs_cpu_threshold_percent
   ecs_memory_threshold_percent = var.monitoring_ecs_memory_threshold_percent
 
-  ec2_instances                = var.monitoring_ec2_instances
+  ec2_instances                = { for key, m in var.monitoring_ec2_instances : key => merge(m, { instance_id = local.ec2_instance_ids[key] }) }
   ec2_cpu_threshold_percent    = var.monitoring_ec2_cpu_threshold_percent
   ec2_memory_threshold_percent = var.monitoring_ec2_memory_threshold_percent
   ec2_disk_threshold_percent   = var.monitoring_ec2_disk_threshold_percent

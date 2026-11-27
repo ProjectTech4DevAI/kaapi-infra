@@ -8,6 +8,7 @@ on:
       - "modules/**"
       - ".github/workflows/deploy-staging.yml"
       - ".github/workflows/plan-and-apply.yml"
+      - ".github/actions/terraform-plan/**"
   workflow_dispatch:
 
 permissions:

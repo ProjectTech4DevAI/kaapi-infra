@@ -80,12 +80,12 @@ variable "ecs_task_definitions" {
       environment      = optional(map(string), {})
     }))
     environment = optional(map(string), {})
-    secrets = optional(map(object({
-      secret = string
-      key    = optional(string)
-    })), {})
-    execution_role_name = string
-    task_role_name      = string
+    secrets = optional(object({
+      db       = optional(list(string), [])
+      rabbitmq = optional(list(string), [])
+      redis    = optional(list(string), [])
+      config   = optional(list(string), [])
+    }), {})
   }))
   default = {}
 
@@ -100,34 +100,85 @@ variable "ecs_task_definitions" {
   }
 
   validation {
-    condition = alltrue(flatten([
-      for td in values(var.ecs_task_definitions) : [
-        for s in values(td.secrets) : s.secret != "REPLACE_ME" && s.secret != ""
-      ]
-    ]))
-    error_message = "Every ECS secret needs a real Secrets Manager secret name (not REPLACE_ME)."
+    condition = alltrue([
+      for td in values(var.ecs_task_definitions) : length(flatten(values(td.secrets))) == length(distinct(flatten(values(td.secrets))))
+    ])
+    error_message = "An ECS secret name appears in more than one secrets group (or twice in one group)."
   }
 
+}
+
+variable "ecs_db_secret_name" {
+  description = "Secrets Manager secret holding the ECS secrets in the \"db\" group (GitHub variable ECS_DB_SECRET_NAME)"
+  type        = string
+
   validation {
-    condition = alltrue(flatten([
-      for td in values(var.ecs_task_definitions) : [
-        for n in [td.execution_role_name, td.task_role_name] : n != "REPLACE_ME" && n != ""
-      ]
-    ]))
-    error_message = "An ECS execution_role_name or task_role_name is still \"REPLACE_ME\" in constants.tfvars; use the real IAM role name."
+    condition = (var.ecs_db_secret_name != null && var.ecs_db_secret_name != "" && var.ecs_db_secret_name != "REPLACE_ME") || alltrue([
+      for td in values(var.ecs_task_definitions) : length(td.secrets.db) == 0
+    ])
+    error_message = "Some ECS secrets are in the \"db\" group, so ecs_db_secret_name must be a real Secrets Manager secret name."
   }
 }
 
-variable "ecs_private_environment" {
-  description = "Env vars kept out of git (emails, usernames), task definition key => NAME => value; merged into that task definition's environment"
-  type        = map(map(string))
-  default     = {}
-  sensitive   = true
+variable "ecs_rabbitmq_secret_name" {
+  description = "Secrets Manager secret holding the ECS secrets in the \"rabbitmq\" group (GitHub variable ECS_RABBITMQ_SECRET_NAME)"
+  type        = string
 
   validation {
-    condition     = alltrue(flatten([for env in values(var.ecs_private_environment) : [for v in values(env) : v != "REPLACE_ME"]]))
-    error_message = "Some values in ecs_private_environment are still \"REPLACE_ME\"."
+    condition = (var.ecs_rabbitmq_secret_name != null && var.ecs_rabbitmq_secret_name != "" && var.ecs_rabbitmq_secret_name != "REPLACE_ME") || alltrue([
+      for td in values(var.ecs_task_definitions) : length(td.secrets.rabbitmq) == 0
+    ])
+    error_message = "Some ECS secrets are in the \"rabbitmq\" group, so ecs_rabbitmq_secret_name must be a real Secrets Manager secret name."
   }
+}
+
+variable "ecs_redis_secret_name" {
+  description = "Secrets Manager secret holding the ECS secrets in the \"redis\" group (GitHub variable ECS_REDIS_SECRET_NAME)"
+  type        = string
+
+  validation {
+    condition = (var.ecs_redis_secret_name != null && var.ecs_redis_secret_name != "" && var.ecs_redis_secret_name != "REPLACE_ME") || alltrue([
+      for td in values(var.ecs_task_definitions) : length(td.secrets.redis) == 0
+    ])
+    error_message = "Some ECS secrets are in the \"redis\" group, so ecs_redis_secret_name must be a real Secrets Manager secret name."
+  }
+}
+
+variable "ecs_config_secret_name" {
+  description = "Secrets Manager secret holding the ECS secrets in the \"config\" group (GitHub variable ECS_CONFIG_SECRET_NAME)"
+  type        = string
+
+  validation {
+    condition = (var.ecs_config_secret_name != null && var.ecs_config_secret_name != "" && var.ecs_config_secret_name != "REPLACE_ME") || alltrue([
+      for td in values(var.ecs_task_definitions) : length(td.secrets.config) == 0
+    ])
+    error_message = "Some ECS secrets are in the \"config\" group, so ecs_config_secret_name must be a real Secrets Manager secret name."
+  }
+}
+
+variable "ecs_execution_role_name" {
+  description = "Existing IAM role ECS uses to pull images, write logs and read secrets; shared by all task definitions"
+  type        = string
+
+  validation {
+    condition     = var.ecs_execution_role_name != "" && var.ecs_execution_role_name != "REPLACE_ME"
+    error_message = "ecs_execution_role_name must be the real IAM role name (GitHub variable ECS_EXECUTION_ROLE_NAME)."
+  }
+}
+
+variable "ecs_task_role_name" {
+  description = "Existing IAM role the app code inside the containers uses; shared by all task definitions"
+  type        = string
+
+  validation {
+    condition     = var.ecs_task_role_name != "" && var.ecs_task_role_name != "REPLACE_ME"
+    error_message = "ecs_task_role_name must be the real IAM role name (GitHub variable ECS_TASK_ROLE_NAME)."
+  }
+}
+
+variable "vpc_cidr" {
+  description = "IPv4 CIDR block of this environment's VPC"
+  type        = string
 }
 
 variable "vpc_id" {
@@ -226,18 +277,44 @@ variable "monitoring_ecs_memory_threshold_percent" {
   default     = 80
 }
 
-variable "monitoring_ec2_instances" {
-  description = "EC2 instances to alarm on, short key => { instance_id, cloudwatch_agent, disk_path }"
+variable "ec2_instance_ids" {
+  description = "EC2 instance IDs, short key => i-...; set from GitHub variables EC2_<KEY>_INSTANCE_ID (empty values are ignored)"
+  type        = map(string)
+  default     = {}
+
+  validation {
+    condition     = alltrue([for id in values(var.ec2_instance_ids) : id == "" || can(regex("^i-[0-9a-f]{8,17}$", id))])
+    error_message = "Every ec2_instance_ids value must be an instance ID like i-0123456789abcdef0."
+  }
+}
+
+variable "ec2_instances" {
+  description = "Existing EC2 instances managed by Terraform, short key => settings; each key needs an ID in ec2_instance_ids"
   type = map(object({
-    instance_id      = string
+    name                 = string # Name tag becomes <project>-<environment>-<name>
+    instance_type        = string
+    iam_instance_profile = optional(string)
+    tags                 = optional(map(string), {}) # extra tags already on the instance, besides Name
+  }))
+  default = {}
+
+  validation {
+    condition     = alltrue([for key in keys(var.ec2_instances) : try(var.ec2_instance_ids[key], "") != ""])
+    error_message = "Every ec2_instances key needs its instance ID in ec2_instance_ids (GitHub variable EC2_<KEY>_INSTANCE_ID)."
+  }
+}
+
+variable "monitoring_ec2_instances" {
+  description = "EC2 instances to alarm on, short key => { cloudwatch_agent, disk_path }; each key needs an ID in ec2_instance_ids"
+  type = map(object({
     cloudwatch_agent = optional(bool, false) # true adds memory and disk alarms; the agent must be installed
     disk_path        = optional(string, "/")
   }))
   default = {}
 
   validation {
-    condition     = alltrue([for inst in values(var.monitoring_ec2_instances) : can(regex("^i-[0-9a-f]{8,17}$", inst.instance_id))])
-    error_message = "Each monitoring_ec2_instances entry needs a real instance_id like i-0123456789abcdef0 (not REPLACE_ME)."
+    condition     = alltrue([for key in keys(var.monitoring_ec2_instances) : try(var.ec2_instance_ids[key], "") != ""])
+    error_message = "Every monitoring_ec2_instances key needs its instance ID in ec2_instance_ids (GitHub variable EC2_<KEY>_INSTANCE_ID)."
   }
 }
 

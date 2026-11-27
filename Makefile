@@ -20,7 +20,7 @@ BACKEND_CONFIG := \
 	-backend-config="region=$(AWS_REGION)" \
 	-backend-config="profile=$(AWS_PROFILE)"
 
-.PHONY: check-env bootstrap init plan apply destroy fmt validate
+.PHONY: check-env bootstrap init plan generate apply destroy fmt validate
 
 check-env:
 	@test -f $(ENV_FILE) || { echo "$(ENV_FILE) not found. Run: cp .env.example $(ENV_FILE) and fill it in."; exit 1; }
@@ -40,6 +40,11 @@ init: check-env
 
 plan: check-env
 	terraform -chdir=$(DIR) plan -var-file=constants.tfvars -out=$(ENV).tfplan
+
+# Writes HCL for the resources in $(DIR)/imports.tf to $(DIR)/generated.tf (plan only, changes nothing)
+generate: check-env
+	@test ! -f $(DIR)/generated.tf || { echo "$(DIR)/generated.tf already exists; move or delete it first."; exit 1; }
+	terraform -chdir=$(DIR) plan -var-file=constants.tfvars -generate-config-out=generated.tf
 
 apply: check-env
 	terraform -chdir=$(DIR) apply $(ENV).tfplan

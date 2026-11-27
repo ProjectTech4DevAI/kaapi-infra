@@ -1,0 +1,141 @@
+name: terraform-plan
+description: Terraform init + plan for one environment, with a change list output
+
+inputs:
+  environment:
+    description: Environment folder under environments/, e.g. staging
+    required: true
+  vars:
+    description: toJSON(vars) of the job's GitHub environment
+    required: true
+  aws-role-arn:
+    description: secrets.AWS_ROLE_ARN, the IAM role this environment assumes through OIDC
+    required: true
+  aws-region:
+    description: secrets.AWS_REGION, e.g. ap-south-1
+    required: true
+  tf-state-bucket:
+    description: secrets.TF_STATE_BUCKET, the S3 bucket holding this environment's state
+    required: true
+  aws-account-id:
+    description: secrets.AWS_ACCOUNT_ID
+    required: true
+  vpc-id:
+    description: secrets.VPC_ID
+    required: true
+  ecs-subnet-ids:
+    description: secrets.ECS_SUBNET_IDS, e.g. ["subnet-..."]
+    required: true
+  ecs-security-group-ids:
+    description: secrets.ECS_SECURITY_GROUP_IDS, e.g. ["sg-..."]
+    required: true
+  lock:
+    description: "true to take the state lock (deploys), false for read-only plans (pull requests)"
+    default: "true"
+  summary-note:
+    description: Line shown above the plan in the run summary
+    default: ""
+
+outputs:
+  has_changes:
+    description: "true when the plan has changes"
+    value: ${{ steps.plan.outputs.has_changes }}
+  summary:
+    description: Markdown list of planned changes (addresses and actions only, no values)
+    value: ${{ steps.summary.outputs.summary }}
+
+runs:
+  using: composite
+  steps:
+    - uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.16.6
+        terraform_wrapper: false
+
+    - uses: aws-actions/configure-aws-credentials@v6
+      with:
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
+        mask-aws-account-id: true
+
+    - name: Init
+      shell: bash
+      env:
+        TF_IN_AUTOMATION: "true"
+        TF_DIR: environments/${{ inputs.environment }}
+      run: >-
+        terraform -chdir="$TF_DIR" init -input=false
+        -backend-config="bucket=${{ inputs.tf-state-bucket }}"
+        -backend-config="region=${{ inputs.aws-region }}"
+
+    # Committed values come from constants.tfvars; private ones from the GitHub environment
+    - name: Plan
+      id: plan
+      shell: bash
+      env:
+        TF_IN_AUTOMATION: "true"
+        TF_INPUT: "false"
+        TF_DIR: environments/${{ inputs.environment }}
+        LOCK_FLAG: ${{ inputs.lock == 'true' && '-lock-timeout=5m' || '-lock=false' }}
+        TF_VAR_aws_region: ${{ inputs.aws-region }}
+        TF_VAR_aws_account_id: ${{ inputs.aws-account-id }}
+        TF_VAR_ecs_execution_role_name: ${{ fromJSON(inputs.vars).ECS_EXECUTION_ROLE_NAME }}
+        TF_VAR_ecs_task_role_name: ${{ fromJSON(inputs.vars).ECS_TASK_ROLE_NAME }}
+        TF_VAR_ecs_db_secret_name: ${{ fromJSON(inputs.vars).ECS_DB_SECRET_NAME }}
+        TF_VAR_ecs_rabbitmq_secret_name: ${{ fromJSON(inputs.vars).ECS_RABBITMQ_SECRET_NAME }}
+        TF_VAR_ecs_redis_secret_name: ${{ fromJSON(inputs.vars).ECS_REDIS_SECRET_NAME }}
+        TF_VAR_ecs_config_secret_name: ${{ fromJSON(inputs.vars).ECS_CONFIG_SECRET_NAME }}
+        TF_VAR_monitoring_alert_emails: ${{ fromJSON(inputs.vars).MONITORING_ALERT_EMAILS || '[]' }}
+        TF_VAR_vpc_id: ${{ inputs.vpc-id }}
+        TF_VAR_ecs_subnet_ids: ${{ inputs.ecs-subnet-ids }}
+        TF_VAR_ecs_security_group_ids: ${{ inputs.ecs-security-group-ids }}
+        # One GitHub variable per EC2 instance; add a key here when adding an instance
+        TF_VAR_ec2_instance_ids: >-
+          {"frontend-ui-guardrails"="${{ fromJSON(inputs.vars).EC2_FRONTEND_UI_GUARDRAILS_INSTANCE_ID }}",
+          "backend"="${{ fromJSON(inputs.vars).EC2_BACKEND_INSTANCE_ID }}",
+          "ssm-bastion"="${{ fromJSON(inputs.vars).EC2_SSM_BASTION_INSTANCE_ID }}",
+          "rabbitmq-redis"="${{ fromJSON(inputs.vars).EC2_RABBITMQ_REDIS_INSTANCE_ID }}"}
+      run: |
+        set +e
+        terraform -chdir="$TF_DIR" plan -var-file=constants.tfvars -out=tfplan -detailed-exitcode $LOCK_FLAG
+        code=$?
+        set -e
+        if [ "$code" -eq 1 ]; then exit 1; fi
+        if [ "$code" -eq 2 ]; then echo "has_changes=true"; else echo "has_changes=false"; fi >> "$GITHUB_OUTPUT"
+
+    - name: Plan summary
+      shell: bash
+      env:
+        TF_DIR: environments/${{ inputs.environment }}
+        NOTE: ${{ inputs.summary-note }}
+      run: |
+        terraform -chdir="$TF_DIR" show -no-color tfplan > "$RUNNER_TEMP/plan.txt"
+        {
+          echo "## Terraform plan: ${{ inputs.environment }}"
+          if [ -n "$NOTE" ]; then echo "$NOTE"; fi
+          echo '```'
+          head -c 60000 "$RUNNER_TEMP/plan.txt"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    # Resource addresses and actions only (no attribute values)
+    - name: Change list
+      id: summary
+      shell: bash
+      env:
+        TF_DIR: environments/${{ inputs.environment }}
+      run: |
+        {
+          echo 'summary<<EOF_SUMMARY'
+          grep -E '^(Plan:|No changes\.)' "$RUNNER_TEMP/plan.txt" || true
+          terraform -chdir="$TF_DIR" show -json tfplan | jq -r '
+            .resource_changes[]
+            | select(.change.actions != ["no-op"] or .change.importing != null)
+            | (if .change.actions == ["create"] then "➕ create"
+               elif .change.actions == ["delete"] then "🗑️ destroy"
+               elif (.change.actions | length) == 2 then "♻️ replace"
+               elif .change.actions == ["update"] then "✏️ update"
+               else "📥 import" end) as $what
+            | "- \($what) `\(.address)`\(if .change.importing != null and $what != "📥 import" then " (import)" else "" end)"'
+          echo 'EOF_SUMMARY'
+        } >> "$GITHUB_OUTPUT"
