@@ -41,6 +41,7 @@ jobs:
           vars: ${{ toJSON(vars) }}
           aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+          tf-state-bucket: ${{ secrets.TF_STATE_BUCKET }}
           aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           vpc-id: ${{ secrets.VPC_ID }}
           ecs-subnet-ids: ${{ secrets.ECS_SUBNET_IDS }}
@@ -49,7 +50,7 @@ jobs:
 
       - name: Save plan
         if: steps.plan.outputs.has_changes == 'true'
-        run: aws s3 cp "$TF_DIR/tfplan" "s3://${{ vars.TF_STATE_BUCKET }}/$PLAN_KEY"
+        run: aws s3 cp "$TF_DIR/tfplan" "s3://${{ secrets.TF_STATE_BUCKET }}/$PLAN_KEY"
 
   apply:
     name: apply (${{ inputs.environment }})
@@ -77,15 +78,15 @@ jobs:
       - name: Init
         run: >-
           terraform -chdir="$TF_DIR" init
-          -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}"
           -backend-config="region=${{ secrets.AWS_REGION }}"
 
       # Applies exactly the reviewed plan; Terraform refuses it if state changed since
       - name: Apply
         run: |
-          aws s3 cp "s3://${{ vars.TF_STATE_BUCKET }}/$PLAN_KEY" "$TF_DIR/tfplan"
+          aws s3 cp "s3://${{ secrets.TF_STATE_BUCKET }}/$PLAN_KEY" "$TF_DIR/tfplan"
           terraform -chdir="$TF_DIR" apply -lock-timeout=5m tfplan
 
       - name: Delete saved plan
         if: always()
-        run: aws s3 rm "s3://${{ vars.TF_STATE_BUCKET }}/$PLAN_KEY" || true
+        run: aws s3 rm "s3://${{ secrets.TF_STATE_BUCKET }}/$PLAN_KEY" || true
