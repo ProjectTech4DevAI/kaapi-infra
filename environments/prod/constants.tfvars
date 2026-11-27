@@ -75,7 +75,10 @@ ecs_task_definitions = {
         "AWS_KMS_KEY_ID",
         "AWS_S3_BUCKET_PREFIX",
         "BACKEND_CORS_ORIGINS",
+        "EMAIL_TEST_USER",
+        "EMAILS_FROM_EMAIL",
         "EMAILS_FROM_NAME",
+        "FIRST_SUPERUSER",
         "FIRST_SUPERUSER_PASSWORD",
         "FRONTEND_HOST",
         "GCP_PROJECT_ID",
@@ -98,6 +101,7 @@ ecs_task_definitions = {
         "SMTP_PORT",
         "SMTP_SSL",
         "SMTP_TLS",
+        "SMTP_USER",
       ]
     }
   }

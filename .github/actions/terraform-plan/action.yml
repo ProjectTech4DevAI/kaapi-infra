@@ -8,8 +8,17 @@ inputs:
   vars:
     description: toJSON(vars) of the job's GitHub environment
     required: true
-  secrets:
-    description: toJSON(secrets) of the job's GitHub environment
+  aws-account-id:
+    description: secrets.AWS_ACCOUNT_ID
+    required: true
+  vpc-id:
+    description: secrets.VPC_ID
+    required: true
+  ecs-subnet-ids:
+    description: secrets.ECS_SUBNET_IDS, e.g. ["subnet-..."]
+    required: true
+  ecs-security-group-ids:
+    description: secrets.ECS_SECURITY_GROUP_IDS, e.g. ["sg-..."]
     required: true
   lock:
     description: "true to take the state lock (deploys), false for read-only plans (pull requests)"
@@ -60,18 +69,17 @@ runs:
         TF_DIR: environments/${{ inputs.environment }}
         LOCK_FLAG: ${{ inputs.lock == 'true' && '-lock-timeout=5m' || '-lock=false' }}
         TF_VAR_aws_region: ${{ fromJSON(inputs.vars).AWS_REGION }}
-        TF_VAR_aws_account_id: ${{ fromJSON(inputs.secrets).AWS_ACCOUNT_ID }}
+        TF_VAR_aws_account_id: ${{ inputs.aws-account-id }}
         TF_VAR_ecs_execution_role_name: ${{ fromJSON(inputs.vars).ECS_EXECUTION_ROLE_NAME }}
         TF_VAR_ecs_task_role_name: ${{ fromJSON(inputs.vars).ECS_TASK_ROLE_NAME }}
         TF_VAR_ecs_db_secret_name: ${{ fromJSON(inputs.vars).ECS_DB_SECRET_NAME }}
         TF_VAR_ecs_rabbitmq_secret_name: ${{ fromJSON(inputs.vars).ECS_RABBITMQ_SECRET_NAME }}
         TF_VAR_ecs_redis_secret_name: ${{ fromJSON(inputs.vars).ECS_REDIS_SECRET_NAME }}
         TF_VAR_ecs_config_secret_name: ${{ fromJSON(inputs.vars).ECS_CONFIG_SECRET_NAME }}
-        TF_VAR_monitoring_alert_emails: ${{ fromJSON(inputs.secrets).MONITORING_ALERT_EMAILS || '[]' }}
-        TF_VAR_ecs_private_environment: ${{ fromJSON(inputs.secrets).ECS_PRIVATE_ENVIRONMENT || '{}' }}
-        TF_VAR_vpc_id: ${{ fromJSON(inputs.secrets).VPC_ID }}
-        TF_VAR_ecs_subnet_ids: ${{ fromJSON(inputs.secrets).ECS_SUBNET_IDS }}
-        TF_VAR_ecs_security_group_ids: ${{ fromJSON(inputs.secrets).ECS_SECURITY_GROUP_IDS }}
+        TF_VAR_monitoring_alert_emails: ${{ fromJSON(inputs.vars).MONITORING_ALERT_EMAILS || '[]' }}
+        TF_VAR_vpc_id: ${{ inputs.vpc-id }}
+        TF_VAR_ecs_subnet_ids: ${{ inputs.ecs-subnet-ids }}
+        TF_VAR_ecs_security_group_ids: ${{ inputs.ecs-security-group-ids }}
         # One GitHub variable per EC2 instance; add a key here when adding an instance
         TF_VAR_ec2_instance_ids: >-
           {"frontend-ui-guardrails"="${{ fromJSON(inputs.vars).EC2_FRONTEND_UI_GUARDRAILS_INSTANCE_ID }}",

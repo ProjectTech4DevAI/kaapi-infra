@@ -39,7 +39,10 @@ jobs:
         with:
           environment: ${{ inputs.environment }}
           vars: ${{ toJSON(vars) }}
-          secrets: ${{ toJSON(secrets) }}
+          aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          vpc-id: ${{ secrets.VPC_ID }}
+          ecs-subnet-ids: ${{ secrets.ECS_SUBNET_IDS }}
+          ecs-security-group-ids: ${{ secrets.ECS_SECURITY_GROUP_IDS }}
           summary-note: Review this plan, then approve the **${{ inputs.environment }}-apply** deployment to apply it.
 
       - name: Save plan

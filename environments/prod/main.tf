@@ -90,7 +90,7 @@ module "ecs_task_definition" {
   image_repository_urls = module.ecr.repository_urls
   image_tag             = each.value.image_tag
   containers            = each.value.containers
-  environment           = merge(each.value.environment, lookup(var.ecs_private_environment, each.key, {}))
+  environment           = each.value.environment
 
   secrets = merge([
     for group, names in each.value.secrets : {

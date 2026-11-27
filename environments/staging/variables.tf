@@ -176,18 +176,6 @@ variable "ecs_task_role_name" {
   }
 }
 
-variable "ecs_private_environment" {
-  description = "Env vars kept out of git (emails, usernames), task definition key => NAME => value; merged into that task definition's environment"
-  type        = map(map(string))
-  default     = {}
-  sensitive   = true
-
-  validation {
-    condition     = alltrue(flatten([for env in values(var.ecs_private_environment) : [for v in values(env) : v != "REPLACE_ME"]]))
-    error_message = "Some values in ecs_private_environment are still \"REPLACE_ME\"."
-  }
-}
-
 variable "vpc_cidr" {
   description = "IPv4 CIDR block of this environment's VPC"
   type        = string

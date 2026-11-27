@@ -34,7 +34,10 @@ jobs:
         with:
           environment: staging
           vars: ${{ toJSON(vars) }}
-          secrets: ${{ toJSON(secrets) }}
+          aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
+          vpc-id: ${{ secrets.VPC_ID }}
+          ecs-subnet-ids: ${{ secrets.ECS_SUBNET_IDS }}
+          ecs-security-group-ids: ${{ secrets.ECS_SECURITY_GROUP_IDS }}
           lock: "false"
           summary-note: Plan for this pull request only. Nothing is applied until it is merged and approved.
 
