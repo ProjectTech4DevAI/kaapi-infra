@@ -8,6 +8,12 @@ inputs:
   vars:
     description: toJSON(vars) of the job's GitHub environment
     required: true
+  aws-role-arn:
+    description: secrets.AWS_ROLE_ARN, the IAM role this environment assumes through OIDC
+    required: true
+  aws-region:
+    description: secrets.AWS_REGION, e.g. ap-south-1
+    required: true
   aws-account-id:
     description: secrets.AWS_ACCOUNT_ID
     required: true
@@ -45,8 +51,8 @@ runs:
 
     - uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: ${{ fromJSON(inputs.vars).AWS_ROLE_ARN }}
-        aws-region: ${{ fromJSON(inputs.vars).AWS_REGION }}
+        role-to-assume: ${{ inputs.aws-role-arn }}
+        aws-region: ${{ inputs.aws-region }}
         mask-aws-account-id: true
 
     - name: Init
@@ -57,7 +63,7 @@ runs:
       run: >-
         terraform -chdir="$TF_DIR" init -input=false
         -backend-config="bucket=${{ fromJSON(inputs.vars).TF_STATE_BUCKET }}"
-        -backend-config="region=${{ fromJSON(inputs.vars).AWS_REGION }}"
+        -backend-config="region=${{ inputs.aws-region }}"
 
     # Committed values come from constants.tfvars; private ones from the GitHub environment
     - name: Plan
@@ -68,7 +74,7 @@ runs:
         TF_INPUT: "false"
         TF_DIR: environments/${{ inputs.environment }}
         LOCK_FLAG: ${{ inputs.lock == 'true' && '-lock-timeout=5m' || '-lock=false' }}
-        TF_VAR_aws_region: ${{ fromJSON(inputs.vars).AWS_REGION }}
+        TF_VAR_aws_region: ${{ inputs.aws-region }}
         TF_VAR_aws_account_id: ${{ inputs.aws-account-id }}
         TF_VAR_ecs_execution_role_name: ${{ fromJSON(inputs.vars).ECS_EXECUTION_ROLE_NAME }}
         TF_VAR_ecs_task_role_name: ${{ fromJSON(inputs.vars).ECS_TASK_ROLE_NAME }}

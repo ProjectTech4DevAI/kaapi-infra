@@ -39,6 +39,8 @@ jobs:
         with:
           environment: ${{ inputs.environment }}
           vars: ${{ toJSON(vars) }}
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
           aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           vpc-id: ${{ secrets.VPC_ID }}
           ecs-subnet-ids: ${{ secrets.ECS_SUBNET_IDS }}
@@ -68,15 +70,15 @@ jobs:
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
           mask-aws-account-id: true
 
       - name: Init
         run: >-
           terraform -chdir="$TF_DIR" init
           -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
-          -backend-config="region=${{ vars.AWS_REGION }}"
+          -backend-config="region=${{ secrets.AWS_REGION }}"
 
       # Applies exactly the reviewed plan; Terraform refuses it if state changed since
       - name: Apply
