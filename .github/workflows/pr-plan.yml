@@ -1,5 +1,3 @@
-# Shows on every pull request what Terraform would change in staging. It only
-# plans (read-only role, no state lock) and never applies.
 name: pr-plan
 
 on:
@@ -27,26 +25,6 @@ jobs:
       summary: ${{ steps.plan.outputs.summary }}
     steps:
       - uses: actions/checkout@v4
-
-      # TEMPORARY: prints the OIDC claims AWS checks against the role trust policy. Remove once fixed.
-      - name: Debug OIDC claims
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const token = await core.getIDToken("sts.amazonaws.com");
-            const claims = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString());
-            core.info(`sub: ${claims.sub}`);
-            core.info(`aud: ${claims.aud}`);
-            core.info(`environment: ${claims.environment}`);
-
-      # TEMPORARY: shows which role the AWS_ROLE_ARN secret points to (role name and account check only)
-      - name: Debug role ARN
-        env:
-          ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-        run: |
-          echo "role name: ${ROLE_ARN##*/}"
-          echo "starts with arn:aws:iam::007036861277:role/ -> $([[ "$ROLE_ARN" == arn:aws:iam::007036861277:role/* ]] && echo yes || echo NO)"
-          echo "length: ${#ROLE_ARN} (spaces/newlines inside: $([[ "$ROLE_ARN" =~ [[:space:]] ]] && echo YES || echo no))"
 
       - name: Plan
         id: plan
