@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "ask": ["Bash"],
     "deny": [
       "Read(./environments/*/terraform.tfvars)",
       "Edit(./environments/*/terraform.tfvars)",

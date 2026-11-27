@@ -24,4 +24,7 @@ terraform.rc
 
 # Real tfvars are local only; commit terraform.tfvars.example instead
 terraform.tfvars
+
+# Output of "make generate" during imports; may contain IDs and settings from AWS
+generated.tf
 .claude/settings.local.json

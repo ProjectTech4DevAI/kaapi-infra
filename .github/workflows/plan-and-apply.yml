@@ -1,6 +1,8 @@
 # Plan and apply one environment, each behind its own GitHub environment:
 #   <env>-plan  : reviewers approve creating the plan
 #   <env>-apply : reviewers read the plan in the run summary, then approve applying it
+# With pull_request: true it only plans (GitHub environment <env>-pr-plan, no state
+# lock, nothing saved or applied) and returns a change summary for the PR comment.
 name: plan-and-apply
 
 on:
@@ -9,6 +11,13 @@ on:
       environment:
         type: string
         required: true
+      pull_request:
+        type: boolean
+        default: false
+    outputs:
+      summary:
+        description: Markdown list of the planned changes
+        value: ${{ jobs.plan.outputs.summary }}
 
 permissions:
   contents: read
@@ -24,12 +33,13 @@ jobs:
   plan:
     name: plan (${{ inputs.environment }})
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}-plan
+    environment: ${{ inputs.pull_request && format('{0}-pr-plan', inputs.environment) || format('{0}-plan', inputs.environment) }}
     concurrency:
-      group: terraform-${{ inputs.environment }}-plan
+      group: ${{ inputs.pull_request && format('terraform-{0}-pr-{1}', inputs.environment, github.event.pull_request.number) || format('terraform-{0}-plan', inputs.environment) }}
       cancel-in-progress: true
     outputs:
       has_changes: ${{ steps.plan.outputs.has_changes }}
+      summary: ${{ steps.summary.outputs.summary }}
     steps:
       - uses: actions/checkout@v4
 
@@ -55,15 +65,25 @@ jobs:
         env:
           TF_VAR_aws_region: ${{ vars.AWS_REGION }}
           TF_VAR_aws_account_id: ${{ secrets.AWS_ACCOUNT_ID }}
+          TF_VAR_ecs_execution_role_name: ${{ vars.ECS_EXECUTION_ROLE_NAME }}
+          TF_VAR_ecs_task_role_name: ${{ vars.ECS_TASK_ROLE_NAME }}
+          TF_VAR_ecs_db_secret_name: ${{ vars.ECS_DB_SECRET_NAME }}
+          TF_VAR_ecs_rabbitmq_secret_name: ${{ vars.ECS_RABBITMQ_SECRET_NAME }}
+          TF_VAR_ecs_redis_secret_name: ${{ vars.ECS_REDIS_SECRET_NAME }}
+          TF_VAR_ecs_config_secret_name: ${{ vars.ECS_CONFIG_SECRET_NAME }}
           TF_VAR_monitoring_alert_emails: ${{ secrets.MONITORING_ALERT_EMAILS || '[]' }}
           TF_VAR_ecs_private_environment: ${{ secrets.ECS_PRIVATE_ENVIRONMENT || '{}' }}
           TF_VAR_vpc_id: ${{ secrets.VPC_ID }}
           TF_VAR_ecs_subnet_ids: ${{ secrets.ECS_SUBNET_IDS }}
           TF_VAR_ecs_security_group_ids: ${{ secrets.ECS_SECURITY_GROUP_IDS }}
-          TF_VAR_monitoring_ec2_instances: ${{ secrets.MONITORING_EC2_INSTANCES || '{}' }}
+          TF_VAR_ec2_instance_ids: >-
+            {"frontend-ui-guardrails"="${{ vars.EC2_FRONTEND_UI_GUARDRAILS_INSTANCE_ID }}",
+            "backend"="${{ vars.EC2_BACKEND_INSTANCE_ID }}",
+            "ssm-bastion"="${{ vars.EC2_SSM_BASTION_INSTANCE_ID }}",
+            "rabbitmq-redis"="${{ vars.EC2_RABBITMQ_REDIS_INSTANCE_ID }}"}
         run: |
           set +e
-          terraform -chdir="$TF_DIR" plan -var-file=constants.tfvars -out=tfplan -detailed-exitcode -lock-timeout=5m
+          terraform -chdir="$TF_DIR" plan -var-file=constants.tfvars -out=tfplan -detailed-exitcode ${{ inputs.pull_request && '-lock=false' || '-lock-timeout=5m' }}
           code=$?
           set -e
           if [ "$code" -eq 1 ]; then exit 1; fi
@@ -74,7 +94,9 @@ jobs:
           terraform -chdir="$TF_DIR" show -no-color tfplan > plan.txt
           {
             echo "## Terraform plan: ${{ inputs.environment }}"
-            if [ "${{ steps.plan.outputs.has_changes }}" = "true" ]; then
+            if [ "${{ inputs.pull_request }}" = "true" ]; then
+              echo "Plan for this pull request only. Nothing is applied until it is merged and approved."
+            elif [ "${{ steps.plan.outputs.has_changes }}" = "true" ]; then
               echo "Review this plan, then approve the **${{ inputs.environment }}-apply** deployment to apply it."
             else
               echo "No changes. Nothing to apply."
@@ -84,14 +106,33 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Resource addresses and actions only (no attribute values), for the PR comment
+      - name: Change list
+        id: summary
+        run: |
+          {
+            echo 'summary<<EOF_SUMMARY'
+            grep -E '^(Plan:|No changes\.)' plan.txt || true
+            terraform -chdir="$TF_DIR" show -json tfplan | jq -r '
+              .resource_changes[]
+              | select(.change.actions != ["no-op"] or .change.importing != null)
+              | (if .change.actions == ["create"] then "➕ create"
+                 elif .change.actions == ["delete"] then "🗑️ destroy"
+                 elif (.change.actions | length) == 2 then "♻️ replace"
+                 elif .change.actions == ["update"] then "✏️ update"
+                 else "📥 import" end) as $what
+              | "- \($what) `\(.address)`\(if .change.importing != null and $what != "📥 import" then " (import)" else "" end)"'
+            echo 'EOF_SUMMARY'
+          } >> "$GITHUB_OUTPUT"
+
       - name: Save plan
-        if: steps.plan.outputs.has_changes == 'true'
+        if: steps.plan.outputs.has_changes == 'true' && !inputs.pull_request
         run: aws s3 cp "$TF_DIR/tfplan" "s3://${{ vars.TF_STATE_BUCKET }}/$PLAN_KEY"
 
   apply:
     name: apply (${{ inputs.environment }})
     needs: plan
-    if: needs.plan.outputs.has_changes == 'true'
+    if: needs.plan.outputs.has_changes == 'true' && !inputs.pull_request
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}-apply
     concurrency:

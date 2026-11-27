@@ -15,6 +15,10 @@ variable "aws_account_id" {
   }
 }
 
+variable "vpc_id" {
+  type = string
+}
+
 variable "state_bucket_name" {
   type = string
 }
