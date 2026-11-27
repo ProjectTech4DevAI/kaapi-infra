@@ -122,12 +122,6 @@ ecs_services = {
     min_tasks          = 0
     max_tasks          = 0
     cpu_target_percent = 70
-
-    # Send ALB traffic to the web container. Remove this block if there is no ALB.
-    # load_balancer = {
-    #   target_group_arn = "REPLACE_ME"
-    #   container        = "backend"
-    # }
   }
 }
 
