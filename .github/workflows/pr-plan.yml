@@ -54,8 +54,8 @@ jobs:
         with:
           environment: staging
           vars: ${{ toJSON(vars) }}
-          aws-role-arn: arn:aws:iam::007036861277:role/app-kaapi-staging-github-pr-plan
-          aws-region: ap-south-1
+          aws-role-arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
           aws-account-id: ${{ secrets.AWS_ACCOUNT_ID }}
           vpc-id: ${{ secrets.VPC_ID }}
           ecs-subnet-ids: ${{ secrets.ECS_SUBNET_IDS }}
